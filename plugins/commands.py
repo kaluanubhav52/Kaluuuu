@@ -2,6 +2,7 @@ import os
 import logging
 import random
 import asyncio
+import time
 from validators import domain
 from Script import script
 from plugins.dbusers import db
@@ -120,49 +121,86 @@ async def start(client, message):
 
     data = message.command[1]
     
-    # 1. HANDLE VERIFICATION LINKS (Kurigram/Pyrogram Compatible Fix)
-    if data.startswith("verify-"):
+    # ─── 1. HANDLE VERIFICATION LINKS (Reference Bot Strategy Based Fix) ───
+    if "verify" in data:
         try:
-            parts = data.split("-", 3)
-            userid = parts[1]
-            token = parts[2]
-            original_file_param = parts[3] if len(parts) > 3 else "start"
+            # Flexible parsing: chahe 'verify_', 'verify-' ho ya complex parameter shortener ka, dono handle karega
+            if "_" in data:
+                token = data.split("_", 1)[1]
+            elif "-" in data:
+                # Agar input format 'verify-userid-token-fileid' jaisa ho
+                parts = data.split("-")
+                if len(parts) >= 3 and parts[0] == "verify":
+                    token = parts[2]
+                else:
+                    token = parts[1]
+            else:
+                token = data
         except Exception as e:
-            logger.error(f"Error splitting verification data: {e}")
-            return await message.reply_text(text="<b>Invalid link format!</b>", protect_content=is_protect)
+            logger.error(f"Error parsing incoming verification token: {e}")
+            return await message.reply_text(text="<b>⚠️ Invalid link format or broken token!</b>", protect_content=is_protect)
 
-        if str(user_id) != str(userid):
-            return await message.reply_text(text="<b>Invalid link or Expired link !</b>", protect_content=is_protect)
-            
-        is_valid = await check_token(client, userid, token)
-        if is_valid == True:
+        # Database verify token status validation
+        is_valid = await check_token(client, user_id, token)
+        
+        # ⚡️ LOOP BREAKER: Token database match ho ya user bypass status updated ho
+        if is_valid == True or await check_verification(client, user_id):
             await client.send_chat_action(message.chat.id, enums.ChatAction.TYPING)
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
             
-            # 🆕 1-Click Auto Get File Button System
+            # Status permanent update mark karein taaki loop repeat na kare
+            try:
+                await verify_user(client, user_id, token)
+            except Exception as ex:
+                logger.error(f"Error updating verify_user status: {ex}")
+
+            # Original target link/file content nikalne ka logic
+            original_file_param = "start"
+            try:
+                verify_status = await db.get_verify_status(user_id) if hasattr(db, 'get_verify_status') else {}
+                if verify_status and verify_status.get("link"):
+                    original_file_param = verify_status.get("link")
+            except:
+                pass
+                
+            # Fallback agar file status parameter direct query string mein ho
+            if original_file_param == "start" and "-" in data:
+                try: 
+                    parts = data.split("-")
+                    if len(parts) > 3:
+                        original_file_param = parts[3]
+                    else:
+                        original_file_param = parts[-1]
+                except: 
+                    pass
+
+            # 🆕 Instant Successful Message & Button Delivery
             get_file_btn = InlineKeyboardMarkup([[
                 InlineKeyboardButton("📥 Gᴇᴛ Fɪʟᴇ / Oᴘᴇɴ Lɪɴᴋ", url=f"https://telegram.me/{username}?start={original_file_param}")
             ]])
             
             success_msg = await message.reply_text(
-                text=script.VERIFIED_SUCCESS_TXT.format(message.from_user.mention) + "\n\n<b>👇 Niche diye gaye button par click karke apni file turant lein!</b>",
+                text=f"✅ <b>Hey {message.from_user.mention},\n\nYour Verification is Successfully Completed!</b>\n\n<b>👇 Niche diye gaye button par click karke apni file turant lein!</b>",
                 protect_content=is_protect,
                 reply_markup=get_file_btn
             )
             asyncio.create_task(auto_delete_msg(success_msg, 300))
-            await verify_user(client, userid, token)
+            return
         else:
-            return await message.reply_text(text="<b>Invalid link or Expired link !</b>", protect_content=is_protect)
+            return await message.reply_text(
+                text="<b>⚠️ Invalid link or Expired token!</b>\n\nKripya bot mein naya link generate karein.", 
+                protect_content=is_protect
+            )
         return
 
-    # 👑 PREMIUM MODE & VERIFICATION CHECK (Common Route Check)
+    # ─── 👑 PREMIUM MODE & VERIFICATION GENERATION CHECK ───
     try:
         is_user_premium = await db.check_premium_status(user_id) if hasattr(db, 'check_premium_status') else False
     
         if not is_user_premium: 
            if settings.get("premium_mode", False):
                buy_btn = InlineKeyboardMarkup([[InlineKeyboardButton("👑 Buy Premium", url=premium_buy_link)]])
-               await message.reply_text("👑 **यह फाइल प्रीमियम है!**\n\nइसे एक्सेस करने के लिए कृपया प्रीमियम लें।\n\n☂️ ᴛʜɪs ᴄᴏɴᴛᴇɴᴛ ɪs ᴘʀᴇᴍɪᴜᴍ ᴘʀᴏᴛᴇᴄᴛᴇᴅ,\n ᴏɴʟʏ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ ᴄᴀɴ ᴀᴄᴄᴇss ᴛʜɪs ʟɪɴᴋ ᴄᴏɴᴛᴇɴᴛ.\n\n🔎 ᴄʟɪᴄᴋ ᴏɴ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", reply_markup=buy_btn)
+               await message.reply_text("👑 **यह फाइल प्रीमियम है!**\n\nइसे एक्सेस करने के लिए कृपया प्रीमियम लें।\n\n☂️ ᴛʜɪs ᴄᴏɴᴛᴇɴᴛ ɪs ᴘʀᴇᴍɪᴜᴍ ᴘʀᴏᴛᴇᴄᴛᴇᴅ,\n ᴏɴʟ هلا ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ ᴄᴀɴ ᴀᴄᴄᴇss ᴛʜɪs ʟɪɴᴋ ᴄᴏɴᴛᴇɴᴛ.\n\n🔎 ᴄʟɪᴄᴋ ᴏɴ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", reply_markup=buy_btn)
                return 
         
         if not is_premium and is_verify_mode == True and not await check_verification(client, user_id):
@@ -184,7 +222,7 @@ async def start(client, message):
         logger.error(f"Verification Check Error: {e}")
         return await message.reply_text(f"**Verification Error - {e}**")
 
-    # 🛠️ GLOBAL "PLEASE WAIT" LOADING MESSAGE (Ab yeh sabke liye pehle aayega)
+    # ─── 🛠️ GLOBAL "PLEASE WAIT" LOADING MESSAGE ───
     processing_keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("👑 DEVELOPER", url="https://t.me/HDFILM0900_BOT")],
         [InlineKeyboardButton("❌ CANCEL", callback_data=f"cancel_batch_{user_id}")]
@@ -193,7 +231,7 @@ async def start(client, message):
     CANCEL_PROCESSING[user_id] = False
     sts = await message.reply(text="<b>🔺 𝙿𝙻𝙴𝙰𝚂𝙴 𝚆ait... Processing your link!</b>", reply_markup=processing_keyboard)
 
-    # MAIN REDIRECT & PROCESSING SYSTEM (Single System)
+    # ─── MAIN REDIRECT & FILE PROCESSING SYSTEM ───
     try:
         decoded_bytes = base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))
         decoded_str = decoded_bytes.decode("ascii")
@@ -205,7 +243,7 @@ async def start(client, message):
             
         msg = await client.get_messages(DB_CHANNEL, int(decode_file_id))
         
-        # ─── CASE A: AGAR FILE "Batch.json" HAI (Yani Batch/Custom Batch Link) ───
+        # CASE A: AGAR FILE "Batch.json" HAI (Batch Links)
         if msg.document and msg.document.file_name == "Batch.json":
             file_id = data
             msgs = BATCH_FILES.get(file_id)
@@ -305,7 +343,7 @@ async def start(client, message):
                     pass
             return
 
-        # ─── CASE B: NORMAL SINGLE FILE LINK (Yani sirf 1 media file hai) ───
+        # CASE B: NORMAL SINGLE FILE LINK
         else:
             if msg.media:
                 media = getattr(msg, msg.media.value)
@@ -342,7 +380,6 @@ async def start(client, message):
                 await client.send_chat_action(message.chat.id, enums.ChatAction.TYPING)
                 del_msg = await msg.copy(chat_id=user_id, protect_content=is_protect)
                 
-            # Single file bhejte hi loading text message ko delete kar dete hain
             await sts.delete()
 
             if is_autodelete == True:
