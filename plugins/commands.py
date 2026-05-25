@@ -169,6 +169,15 @@ async def start(client, message):
     except Exception as e:
         return await message.reply_text(f"**Error - {e}**")
 
+    processing_keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("👑 DEVELOPER", url="https://t.me/HDFILM0900_BOT")],
+        [InlineKeyboardButton("❌ CANCEL", callback_data=f"cancel_batch_{user_id}")]
+    ])
+    
+    CANCEL_PROCESSING[user_id] = False
+    sts = await message.reply(text="<b>🔺 𝙿𝙻𝙴𝙰𝚂𝙴 𝚆ait... Processing your link!</b>", reply_markup=processing_keyboard)
+    
+
     # MAIN REDIRECT & PROCESSING SYSTEM (Single System)
     try:
         decoded_bytes = base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))
@@ -183,13 +192,6 @@ async def start(client, message):
         
         # 🛠️ CHECK: Agar file ".json" format mein hai, matlab yeh ek BATCH (multiple files) hai!
         if msg.document and msg.document.file_name == "Batch.json":
-            processing_keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("👑 DEVELOPER", url="https://t.me/HDFILM0900_BOT")],
-                [InlineKeyboardButton("❌ CANCEL", callback_data=f"cancel_batch_{user_id}")]
-            ])
-            
-            CANCEL_PROCESSING[user_id] = False
-            sts = await message.reply(text="<b>🔺 𝙿𝙻𝙴𝙰𝚂𝙴 𝚆ait... Fetching Batch Files!</b>", reply_markup=processing_keyboard)
             
             file_id = data
             msgs = BATCH_FILES.get(file_id)
