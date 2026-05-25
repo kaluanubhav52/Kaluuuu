@@ -131,8 +131,7 @@ async def start(client, message):
             await client.send_chat_action(message.chat.id, enums.ChatAction.TYPING)
             await asyncio.sleep(1)
             
-            # 🆕 1-Click Auto Get File Button System joda gaya hai
-            # Yahan hum check kar rahe hain ki agar backup link pada hai toh wahi user ko bypass button mein dein
+            # 🆕 Dynamic file retrieval param handle kar rahe hain verification ke baad ke liye
             original_file_param = data.split("-", 3)[3] if len(data.split("-")) > 3 else "start"
             
             get_file_btn = InlineKeyboardMarkup([[
@@ -157,12 +156,16 @@ async def start(client, message):
         if not is_user_premium: 
            if settings.get("premium_mode", False):
                buy_btn = InlineKeyboardMarkup([[InlineKeyboardButton("👑 Buy Premium", url=premium_buy_link)]])
-               await message.reply_text("👑 **यह फाइल प्रीमियम है!**\n\nइसे एक्सेस करने के लिए कृपया प्रीमियम लें।\n\n☂️ ᴛʜɪs ᴄᴏɴᴛᴇɴᴛ ɪs ᴘʀᴇᴍɪᴜᴍ ᴘʀᴏᴛᴇᴄᴛᴇᴅ,\n ᴏɴʟʏ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ ᴄᴀɴ ᴀᴄᴄᴇss ᴛʜɪs ʟɪɴᴋ ᴄᴏɴᴛᴇɴᴛ.\n\n🔎 ᴄʟɪᴄᴋ ᴏɴ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", reply_markup=buy_btn)
+               await message.reply_text("👑 **यह फाइल प्रीमियम है!**\n\nइसे एक्सेस करने के लिए कृपया प्रीमियम लें।\n\n☂️ ᴛʜɪs ᴄᴏɴᴛᴇɴᴛ ɪs ᴘʀᴇᴍɪᴜᴍ ᴘʀᴏᴛᴇᴄᴛᴇᴅ,\n ᴏɴʟʏ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ ᴄᴀɴ ᴀᴄᴄᴇss ᴛʜɪs ʟɪнк ᴄᴏɴᴛᴇɴᴛ.\n\n🔎 ᴄʟɪᴄᴋ ᴏɴ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", reply_markup=buy_btn)
                return 
         
         if not is_premium and is_verify_mode == True and not await check_verification(client, user_id):
+            # 🛠️ FIXED: Yahan 'data' parameter ko safely string formatting ke sath bypass kiya hai taaki shortener crash na ho
+            redirect_url = f"https://telegram.me/{username}?start={str(data)}"
+            token_url = await get_token(client, user_id, redirect_url)
+            
             btn = [[
-                InlineKeyboardButton("🌀 泛𝙴𝚁𝙸𝙵𝚈 🌀", url=await get_token(client, user_id, f"https://telegram.me/{username}?start={data}")),
+                InlineKeyboardButton("🌀 𝚅𝙴𝚁𝙸𝙵𝚈 🌀", url=token_url),
                 InlineKeyboardButton("⁉️ 𝚃𝚄𝚃𝙾𝚁𝙸𝙰𝙻 ⁉️", url=VERIFY_TUTORIAL)
             ]]
             not_verified_msg = await message.reply_text(
@@ -173,7 +176,8 @@ async def start(client, message):
             asyncio.create_task(auto_delete_msg(not_verified_msg, 300))
             return
     except Exception as e:
-        return await message.reply_text(f"**Error - {e}**")
+        logger.error(f"Verification Check Error: {e}")
+        return await message.reply_text(f"**Verification Error - {e}**")
 
     # 🛠️ GLOBAL "PLEASE WAIT" LOADING MESSAGE (Ab yeh sabke liye pehle aayega)
     processing_keyboard = InlineKeyboardMarkup([
