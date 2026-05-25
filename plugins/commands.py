@@ -96,7 +96,7 @@ async def start(client, message):
             InlineKeyboardButton('💁‍♀️ Fᴇᴀᴛᴜʀᴇs', callback_data='help'),
             InlineKeyboardButton('😊 Aʙᴏᴜᴛ', callback_data='about')
         ],[
-            InlineKeyboardButton('⁉️ Sᴇᴛᴛɪɴɢs ⁉️', callback_data='open_admin_from_start')
+            InlineKeyboardButton('⁉️ Sᴇᴛᴛɪ年ɢs ⁉️', callback_data='open_admin_from_start')
         ]]
         if CLONE_MODE == True:
             buttons.append([InlineKeyboardButton('🤖 ᴄʀᴇᴀᴛᴇ ʏᴏᴜʀ ᴏᴡɴ ᴄʟᴏɴᴇ ʙᴏᴛ', callback_data='clone')])
@@ -141,173 +141,35 @@ async def start(client, message):
             return await message.reply_text(text="<b>Invalid link or Expired link !</b>", protect_content=is_protect)
         return
 
-    # 2. HANDLE BATCH LINKS
-    elif data.split("-", 1)[0] == "BATCH":
-        try:
-            is_user_premium = await db.check_premium_status(user_id) if hasattr(db, 'check_premium_status') else False
-        
-            if not is_user_premium: 
-               if settings.get("premium_mode", False):
-                   buy_btn = InlineKeyboardMarkup([[InlineKeyboardButton("👑 Buy Premium", url=premium_buy_link)]])
-                   await message.reply_text("👑 **यह फाइल प्रीमियम है!**\n\nइसे एक्सेस करने के लिए कृपया प्रीमियम लें।\n\n☂️ ᴛʜɪs ᴄᴏɴᴛᴇɴᴛ ɪs ᴘʀᴇᴍɪᴜᴍ ᴘʀᴏᴛᴇᴄᴛᴇᴅ,\n ᴏɴʟʏ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ ᴄᴀɴ ᴀᴄᴄᴇss ᴛʜɪs ʟɪɴᴋ ᴄᴏɴᴛᴇɴᴛ.\n\n🔎 ᴄʟɪᴄᴋ ᴏɴ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", reply_markup=buy_btn)
-                   return 
-            
-            if not is_premium and is_verify_mode == True and not await check_verification(client, user_id):
-                btn = [[
-                    InlineKeyboardButton("🌀 𝚅𝙴𝚁𝙸𝙵𝚈 🌀", url=await get_token(client, user_id, f"https://telegram.me/{username}?start=")),
-                    InlineKeyboardButton("⁉️ 𝚃𝚄𝚃𝙾𝚁𝙸𝙰𝙻 ⁉️", url=VERIFY_TUTORIAL)
-                ]]
-                not_verified_msg = await message.reply_text(
-                    text=script.NOT_VERIFIED_TXT.format(message.from_user.mention),
-                    protect_content=is_protect,
-                    reply_markup=InlineKeyboardMarkup(btn)
-                )
-                asyncio.create_task(auto_delete_msg(not_verified_msg, 300))
-                return
-        except Exception as e:
-            return await message.reply_text(f"**Error - {e}**")
-            
-        processing_keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("👑 DEVELOPER", url="https://t.me/HDFILM0900_BOT")],
-            [InlineKeyboardButton("❌ CANCEL", callback_data=f"cancel_batch_{user_id}")]
-        ])
-        
-        CANCEL_PROCESSING[user_id] = False
+    # 🛠️ MODIFIED SECTION: Purane "BATCH" if-condition ko humne hata diya hai.
+    # Ab saare links (Single, Batch, Custom Batch) isi ek Single Link Model par process honge.
 
-        sts = await message.reply(
-            text="<b>🔺 𝙿𝙻𝙴𝙰𝚂𝙴 𝚆ait.",
-            reply_markup=processing_keyboard
-        )
+    # 👑 PREMIUM MODE & VERIFICATION CHECK (Common for all files)
+    try:
+        is_user_premium = await db.check_premium_status(user_id) if hasattr(db, 'check_premium_status') else False
+    
+        if not is_user_premium: 
+           if settings.get("premium_mode", False):
+               buy_btn = InlineKeyboardMarkup([[InlineKeyboardButton("👑 Buy Premium", url=premium_buy_link)]])
+               await message.reply_text("👑 **यह फाइल प्रीमियम है!**\n\nइसे एक्सेस करने के लिए कृपया प्रीमियम लें।\n\n☂️ ᴛʜɪs ᴄᴏɴᴛᴇɴᴛ ɪs ᴘʀᴇᴍɪᴜᴍ ᴘʀᴏᴛᴇᴄᴛᴇᴅ,\n ᴏɴʟʏ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ ᴄᴀɴ ᴀᴄᴄᴇss ᴛʜɪs ʟɪɴᴋ ᴄᴏɴᴛᴇɴᴛ.\n\n🔎 ᴄʟɪᴄᴋ ᴏɴ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", reply_markup=buy_btn)
+               return 
         
-        file_id = data.split("-", 1)[1]
-        msgs = BATCH_FILES.get(file_id)
-        
-        if not msgs:
-            try:
-                decode_file_id = base64.urlsafe_b64decode(file_id + "=" * (-len(file_id) % 4)).decode("ascii")
-                
-                if "file_" in decode_file_id:
-                    decode_file_id = decode_file_id.replace("file_", "")
-                elif "_" in decode_file_id:
-                    decode_file_id = decode_file_id.split("_", 1)[1]
-                    
-                msg = await client.get_messages(DB_CHANNEL, int(decode_file_id))
-                file = await client.download_media(msg)
-                
-                with open(file, "r") as file_data:
-                    msgs = json.loads(file_data.read())
-                
-                os.remove(file)
-                BATCH_FILES[file_id] = msgs
-            except Exception as e:
-                await sts.edit("<b>FAILED TO FETCH BATCH DATA ❌</b>")
-                return await client.send_message(DB_CHANNEL, f"UNABLE TO OPEN BATCH FILE: {str(e)}")
-            
-        filesarr = []
-        for msg_item in msgs:
-            if CANCEL_PROCESSING.get(user_id, False):
-                await sts.edit("<b>❌ Batch Processing Cancelled By User!</b>")
-                await asyncio.sleep(3)
-                await sts.delete()
-                if user_id in CANCEL_PROCESSING:
-                    del CANCEL_PROCESSING[user_id]
-                return
+        if not is_premium and is_verify_mode == True and not await check_verification(client, user_id):
+            btn = [[
+                InlineKeyboardButton("🌀 𝚅𝙴𝚁𝙸𝙵𝚈 🌀", url=await get_token(client, user_id, f"https://telegram.me/{username}?start=")),
+                InlineKeyboardButton("⁉️ 𝚃𝚄𝚃𝙾𝚁𝙸𝙰𝙻 ⁉️", url=VERIFY_TUTORIAL)
+            ]]
+            not_verified_msg = await message.reply_text(
+                text=script.NOT_VERIFIED_TXT.format(message.from_user.mention),
+                protect_content=is_protect,
+                reply_markup=InlineKeyboardMarkup(btn)
+            )
+            asyncio.create_task(auto_delete_msg(not_verified_msg, 300))
+            return
+    except Exception as e:
+        return await message.reply_text(f"**Error - {e}**")
 
-            try:
-                channel_id = int(msg_item.get("channel_id"))
-                msgid = int(msg_item.get("msg_id"))
-                info = await client.get_messages(channel_id, msgid)
-                
-                if info.empty or info.service:
-                    continue
-                    
-                if info.media:
-                    file_type = info.media
-                    file = getattr(info, file_type.value)
-                    f_caption = getattr(info, 'caption', '')
-                    if f_caption:
-                        f_caption = f"@HDFILM0900_BOT {f_caption.html}"
-                    old_title = getattr(file, "file_name", "Media File")
-                    title = formate_file_name(old_title)
-                    
-                    size = get_size(int(file.file_size)) if hasattr(file, "file_size") else "Unknown"
-                    if BATCH_FILE_CAPTION:
-                        try:
-                            f_caption = BATCH_FILE_CAPTION.format(file_name='' if title is None else title, file_size='' if size is None else size, file_caption='' if f_caption is None else f_caption)
-                        except:
-                            f_caption = f_caption
-                    if f_caption is None:
-                        f_caption = f"@HDFILM0900_BOT {title}"
-                        
-                    if STREAM_MODE == True and (info.video or info.document):
-                        stream = f"{URL}watch/{str(info.id)}/{quote_plus(get_name(info))}?hash={get_hash(info)}"
-                        download = f"{URL}{str(info.id)}/{quote_plus(get_name(info))}?hash={get_hash(info)}"
-                        button = [[
-                            InlineKeyboardButton("• ᴅᴏᴡɴʟᴏᴀᴅ •", url=download),
-                            InlineKeyboardButton('• ᴡᴀᴛᴄʜ •', url=stream)
-                        ],[
-                            InlineKeyboardButton("• ᴡᴀᴛᴄʜ ɪn ᴡᴇʙ ᴀᴘᴘ •", web_app=WebAppInfo(url=stream))
-                        ]]
-                        reply_markup = InlineKeyboardMarkup(button)
-                    else:
-                        reply_markup = None
-                    
-                    await client.send_chat_action(message.chat.id, enums.ChatAction.UPLOAD_DOCUMENT)
-                    msg_out = await info.copy(chat_id=user_id, caption=f_caption, protect_content=is_protect, reply_markup=reply_markup)
-                else:
-                    await client.send_chat_action(message.chat.id, enums.ChatAction.TYPING)
-                    msg_out = await info.copy(chat_id=user_id, protect_content=is_protect)
-                
-                filesarr.append(msg_out)
-                await asyncio.sleep(1)
-            except FloodWait as e:
-                await asyncio.sleep(e.value)
-                msg_out = await info.copy(chat_id=user_id, protect_content=is_protect)
-                filesarr.append(msg_out)
-            except Exception as e:
-                logger.error(f"Error copying batch sub-file: {e}")
-                continue
-                
-        await sts.delete()
-        
-        if user_id in CANCEL_PROCESSING:
-            del CANCEL_PROCESSING[user_id]
-        
-        if is_autodelete == True:
-            k = await client.send_message(chat_id=user_id, text=f"<b><u>❗️❗️❗️IMPORTANT❗️️❗️❗️</u></b>\n\nThis Movie File/Video will be deleted in <b><u>{del_time_minutes} minutes</u> 🫥 <i></b>(Due to Copyright Issues)</i>.\n\n<b><i>Please forward this File/Video to your Saved Messages and Start Download there</b>")
-            await asyncio.sleep(del_time_seconds)
-            for x in filesarr:
-                try:
-                    await x.delete()
-                except:
-                    pass
-            try:
-                await k.edit_text("<b>Your All Files/Videos is successfully deleted!!!</b>")
-            except:
-                pass
-        return
-
-    # 3. HANDLE SINGLE FILE / PHOTO LINKS
-    is_user_premium = await db.check_premium_status(user_id) if hasattr(db, 'check_premium_status') else False
-    if not is_user_premium: 
-       if settings.get("premium_mode", False):
-           buy_btn = InlineKeyboardMarkup([[InlineKeyboardButton("👑 Buy Premium", url=premium_buy_link)]])
-           await message.reply_text("👑 **यह फाइल प्रीमियम है!**\n\nइसे एक्सेस करने के लिए कृपया प्रीमियम लें।\n\n☂️ ᴛʜɪs ᴄᴏɴᴛᴇɴᴛ ɪs ᴘʀᴇᴍɪᴜᴍ ᴘʀᴏᴛᴇᴄᴛᴇᴅ,\n ᴏɴʟʏ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ ᴄᴀɴ ᴀᴄᴄᴇss ᴛʜɪs ʟɪɴᴋ ᴄᴏɴᴛᴇɴᴛ.\n\n🔎 ᴄʟɪᴄᴋ ᴏɴ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ.", reply_markup=buy_btn)
-           return 
-           
-    if not is_premium and is_verify_mode == True and not await check_verification(client, user_id):
-        btn = [[
-            InlineKeyboardButton("🌀 𝚅𝙴𝚁𝙸𝙵𝚈 🌀", url=await get_token(client, user_id, f"https://telegram.me/{username}?start=")),
-            InlineKeyboardButton("⁉️ 𝚃𝚄𝚃𝙾𝚁𝙸𝙰𝙻 ⁉️", url=VERIFY_TUTORIAL)
-                ]]
-        not_verified_msg = await message.reply_text(
-            text=script.NOT_VERIFIED_TXT.format(message.from_user.mention),
-            protect_content=is_protect,
-            reply_markup=InlineKeyboardMarkup(btn)
-        )
-        asyncio.create_task(auto_delete_msg(not_verified_msg, 300))
-        return
-
+    # MAIN REDIRECT & PROCESSING SYSTEM (Single System)
     try:
         decoded_bytes = base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))
         decoded_str = decoded_bytes.decode("ascii")
@@ -319,55 +181,166 @@ async def start(client, message):
             
         msg = await client.get_messages(DB_CHANNEL, int(decode_file_id))
         
-        if msg.media:
-            media = getattr(msg, msg.media.value)
-            old_title = media.file_name if hasattr(media, "file_name") else "Photo File"
-            title = formate_file_name(old_title)
-            size = get_size(media.file_size) if hasattr(media, "file_size") else "Unknown"
+        # 🛠️ CHECK: Agar file ".json" format mein hai, matlab yeh ek BATCH (multiple files) hai!
+        if msg.document and msg.document.file_name == "Batch.json":
+            processing_keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("👑 DEVELOPER", url="https://t.me/HDFILM0900_BOT")],
+                [InlineKeyboardButton("❌ CANCEL", callback_data=f"cancel_batch_{user_id}")]
+            ])
             
-            f_caption = f"@HDFILM0900_BOT <code>{title}</code>"
-            if CUSTOM_FILE_CAPTION:
+            CANCEL_PROCESSING[user_id] = False
+            sts = await message.reply(text="<b>🔺 𝙿𝙻𝙴𝙰𝚂𝙴 𝚆ait... Fetching Batch Files!</b>", reply_markup=processing_keyboard)
+            
+            file_id = data
+            msgs = BATCH_FILES.get(file_id)
+            
+            if not msgs:
                 try:
-                    f_caption=CUSTOM_FILE_CAPTION.format(file_name= '' if title is None else title, file_size='' if size is None else size, file_caption='')
+                    file = await client.download_media(msg)
+                    with open(file, "r") as file_data:
+                        msgs = json.loads(file_data.read())
+                    os.remove(file)
+                    BATCH_FILES[file_id] = msgs
+                except Exception as e:
+                    await sts.edit("<b>FAILED TO FETCH BATCH DATA ❌</b>")
+                    return await client.send_message(DB_CHANNEL, f"UNABLE TO OPEN BATCH FILE: {str(e)}")
+                
+            filesarr = []
+            for msg_item in msgs:
+                if CANCEL_PROCESSING.get(user_id, False):
+                    await sts.edit("<b>❌ Batch Processing Cancelled By User!</b>")
+                    await asyncio.sleep(3)
+                    await sts.delete()
+                    if user_id in CANCEL_PROCESSING:
+                        del CANCEL_PROCESSING[user_id]
+                    return
+
+                try:
+                    channel_id = int(msg_item.get("channel_id"))
+                    msgid = int(msg_item.get("msg_id"))
+                    info = await client.get_messages(channel_id, msgid)
+                    
+                    if info.empty or info.service:
+                        continue
+                        
+                    if info.media:
+                        file_type = info.media
+                        file = getattr(info, file_type.value)
+                        f_caption = getattr(info, 'caption', '')
+                        if f_caption:
+                            f_caption = f"@HDFILM0900_BOT {f_caption.html}"
+                        old_title = getattr(file, "file_name", "Media File")
+                        title = formate_file_name(old_title)
+                        
+                        size = get_size(int(file.file_size)) if hasattr(file, "file_size") else "Unknown"
+                        if BATCH_FILE_CAPTION:
+                            try:
+                                f_caption = BATCH_FILE_CAPTION.format(file_name='' if title is None else title, file_size='' if size is None else size, file_caption='' if f_caption is None else f_caption)
+                            except:
+                                f_caption = f_caption
+                        if f_caption is None:
+                            f_caption = f"@HDFILM0900_BOT {title}"
+                            
+                        if STREAM_MODE == True and (info.video or info.document):
+                            stream = f"{URL}watch/{str(info.id)}/{quote_plus(get_name(info))}?hash={get_hash(info)}"
+                            download = f"{URL}{str(info.id)}/{quote_plus(get_name(info))}?hash={get_hash(info)}"
+                            button = [[
+                                InlineKeyboardButton("• ᴅᴏᴡɴʟᴏᴀᴅ •", url=download),
+                                InlineKeyboardButton('• ᴡᴀᴛᴄʜ •', url=stream)
+                            ],[
+                                InlineKeyboardButton("• ᴡᴀᴛᴄʜ ɪn ᴡᴇʙ ᴀᴘᴘ •", web_app=WebAppInfo(url=stream))
+                            ]]
+                            reply_markup = InlineKeyboardMarkup(button)
+                        else:
+                            reply_markup = None
+                        
+                        await client.send_chat_action(message.chat.id, enums.ChatAction.UPLOAD_DOCUMENT)
+                        msg_out = await info.copy(chat_id=user_id, caption=f_caption, protect_content=is_protect, reply_markup=reply_markup)
+                    else:
+                        await client.send_chat_action(message.chat.id, enums.ChatAction.TYPING)
+                        msg_out = await info.copy(chat_id=user_id, protect_content=is_protect)
+                    
+                    filesarr.append(msg_out)
+                    await asyncio.sleep(1)
+                except FloodWait as e:
+                    await asyncio.sleep(e.value)
+                    msg_out = await info.copy(chat_id=user_id, protect_content=is_protect)
+                    filesarr.append(msg_out)
+                except Exception as e:
+                    logger.error(f"Error copying batch sub-file: {e}")
+                    continue
+                    
+            await sts.delete()
+            
+            if user_id in CANCEL_PROCESSING:
+                del CANCEL_PROCESSING[user_id]
+            
+            if is_autodelete == True:
+                k = await client.send_message(chat_id=user_id, text=f"<b><u>...IMPORTANT...</u></b>\n\nThis Movie File/Video will be deleted in <b><u>{del_time_minutes} minutes</u> ... <i></b>(Due to Copyright Issues)</i>.\n\n<b><i>Please forward this File/Video to your Saved Messages and Start Download there</b>")
+                await asyncio.sleep(del_time_seconds)
+                for x in filesarr:
+                    try:
+                        await x.delete()
+                    except:
+                        pass
+                try:
+                    await k.edit_text("<b>Your All Files/Videos is successfully deleted!!!</b>")
                 except:
                     pass
-            
-            if STREAM_MODE == True and (msg.video or msg.document):
-                log_msg = msg
-                stream = f"{URL}watch/{str(log_msg.id)}/{quote_plus(get_name(log_msg))}?hash={get_hash(log_msg)}"
-                download = f"{URL}{str(log_msg.id)}/{quote_plus(get_name(log_msg))}?hash={get_hash(log_msg)}"
-                button = [[
-                    InlineKeyboardButton("• ᴅᴏᴡɴʟᴏᴀᴅ •", url=download),
-                    InlineKeyboardButton('• ᴡᴀᴛᴄʜ •', url=stream)
-                ],[
-                    InlineKeyboardButton("• ᴡᴀᴛᴄʜ ɪɴ ᴡᴇʙ ᴀᴘᴘ •", web_app=WebAppInfo(url=stream))
-                ]]
-                reply_markup=InlineKeyboardMarkup(button)
-            else:
-                reply_markup = None
-                
-            await client.send_chat_action(message.chat.id, enums.ChatAction.UPLOAD_DOCUMENT)
-            await asyncio.sleep(1) 
-            
-            del_msg = await msg.copy(chat_id=user_id, caption=f_caption, reply_markup=reply_markup, protect_content=is_protect)
+            return
+
+        # 🛠️ ELSE: Agar file normal hai (Json batch nahi hai), toh use SINGLE FILE ki tarah send karo
         else:
-            await client.send_chat_action(message.chat.id, enums.ChatAction.TYPING)
-            del_msg = await msg.copy(chat_id=user_id, protect_content=is_protect)
+            if msg.media:
+                media = getattr(msg, msg.media.value)
+                old_title = media.file_name if hasattr(media, "file_name") else "Photo File"
+                title = formate_file_name(old_title)
+                size = get_size(media.file_size) if hasattr(media, "file_size") else "Unknown"
+                
+                f_caption = f"@HDFILM0900_BOT <code>{title}</code>"
+                if CUSTOM_FILE_CAPTION:
+                    try:
+                        f_caption=CUSTOM_FILE_CAPTION.format(file_name= '' if title is None else title, file_size='' if size is None else size, file_caption='')
+                    except:
+                        pass
+                
+                if STREAM_MODE == True and (msg.video or msg.document):
+                    log_msg = msg
+                    stream = f"{URL}watch/{str(log_msg.id)}/{quote_plus(get_name(log_msg))}?hash={get_hash(log_msg)}"
+                    download = f"{URL}{str(log_msg.id)}/{quote_plus(get_name(log_msg))}?hash={get_hash(log_msg)}"
+                    button = [[
+                        InlineKeyboardButton("• ᴅᴏᴡɴʟᴏᴀᴅ •", url=download),
+                        InlineKeyboardButton('• ᴡᴀᴛᴄʜ •', url=stream)
+                    ],[
+                        InlineKeyboardButton("• ᴡᴀᴛᴄʜ ɪɴ ᴡᴇʙ ᴀᴘᴘ •", web_app=WebAppInfo(url=stream))
+                    ]]
+                    reply_markup=InlineKeyboardMarkup(button)
+                else:
+                    reply_markup = None
+                    
+                await client.send_chat_action(message.chat.id, enums.ChatAction.UPLOAD_DOCUMENT)
+                await asyncio.sleep(1) 
+                
+                del_msg = await msg.copy(chat_id=user_id, caption=f_caption, reply_markup=reply_markup, protect_content=is_protect)
+            else:
+                await client.send_chat_action(message.chat.id, enums.ChatAction.TYPING)
+                del_msg = await msg.copy(chat_id=user_id, protect_content=is_protect)
+                
+            if is_autodelete == True:
+                k = await client.send_message(chat_id = user_id, text=f"<b><u>...IMPORTANT...</u></b>\n\nThis Movie File/Video will be deleted in <b><u>{del_time_minutes} minutes</u> ... <i></b>(Due to Copyright Issues)</i>.\n\n<b><i>Please forward this File/Video to your Saved Messages and Start Download there</b>")
+                await asyncio.sleep(del_time_seconds)
+                try:
+                    await del_msg.delete()
+                except:
+                    pass
+                try:
+                    await k.edit_text("<b>Your File/Video is successfully deleted!!!</b>")
+                except:
+                    pass
+            return
             
-        if is_autodelete == True:
-            k = await client.send_message(chat_id = user_id, text=f"<b><u>❗️❗️❗️IMPORTANT❗️️❗️❗️</u></b>\n\nThis Movie File/Video will be deleted in <b><u>{del_time_minutes} minutes</u> 🫥 <i></b>(Due to Copyright Issues)</i>.\n\n<b><i>Please forward this File/Video to your Saved Messages and Start Download there</b>")
-            await asyncio.sleep(del_time_seconds)
-            try:
-                await del_msg.delete()
-            except:
-                pass
-            try:
-                await k.edit_text("<b>Your File/Video is successfully deleted!!!</b>")
-            except:
-                pass
-        return
     except Exception as e:
-        logger.error(f"Error in single file delivery: {str(e)}")
+        logger.error(f"Error in file delivery route: {str(e)}")
         pass
 
 @Client.on_message(filters.command('api') & filters.private)
@@ -408,7 +381,7 @@ async def base_site_handler(client, m: Message):
 async def cb_handler(client: Client, query: CallbackQuery):
     settings = await db.get_settings()
     start_photo = settings.get("start_photo", None)
-    is_spoiler = settings.get("start_spoiler", False) # 🌟 Callback handling me bhi spoiler dynamic kiya
+    is_spoiler = settings.get("start_spoiler", False)
     db_start_text = settings.get("custom_start_text", None)
     start_caption = db_start_text if db_start_text else script.START_TXT
 
@@ -453,7 +426,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             InlineKeyboardButton('💁‍♀️ Fᴇᴀᴛᴜʀᴇs', callback_data='help'),
             InlineKeyboardButton('😊 Aʙᴏᴜᴛ', callback_data='about')
         ],[
-        InlineKeyboardButton('⁉️ Sᴇᴛᴛɪɴɢs ⁉️', callback_data='open_admin_from_start')
+            InlineKeyboardButton('⁉️ Sᴇᴛᴛɪ年gs ⁉️', callback_data='open_admin_from_start')
         ]]
         if CLONE_MODE == True:
             buttons.append([InlineKeyboardButton('🤖 ᴄʀᴇᴀᴛᴇ ʏᴏᴜʀ ᴏᴡɴ ᴄʟᴏɴᴇ ʙᴏᴛ', callback_data='clone')])      
