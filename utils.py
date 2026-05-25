@@ -1,6 +1,3 @@
-# Don't Remove Credit @VJ_Bots
-# Subscribe YouTube Channel For Amazing Bot @Tech_VJ
-# Ask Doubt on telegram @KingVJ01
 
 import logging, asyncio, os, re, random, pytz, aiohttp, requests, string, json, http.client, time
 from datetime import date, datetime
@@ -8,10 +5,9 @@ from config import VERIFY_EXPIRE_TIME # Yeh fallback ke liye rahega
 from shortzy import Shortzy
 from plugins.dbusers import db
 
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-# Global memory dict to track active session tokens
 TOKENS = {}
 
 async def get_verify_shorted_link(link):
@@ -44,74 +40,47 @@ async def get_verify_shorted_link(link):
             return link
 
 async def check_token(bot, userid, token):
-    """
-    ⚡️ FIXED: Integer aur String datatype ki problem dur karne ke liye 
-    userid ko strict 'int' mein convert kiya gaya hai taaki dict match fail na ho.
-    """
-    try:
-        target_id = int(userid)
-        if target_id in TOKENS:
-            TKN = TOKENS[target_id]
-            if token in TKN:
-                is_used = TKN[token]
-                # Agar token already use ho chuka hai toh false, warna valid (True)
-                return not is_used
-        return False
-    except Exception as e:
-        logger.error(f"Error checking token in utils: {e}")
+    user = await bot.get_users(userid)
+    if user.id in TOKENS.keys():
+        TKN = TOKENS[user.id]
+        if token in TKN.keys():
+            is_used = TKN[token]
+            if is_used == True:
+                return False
+            else:
+                return True
+    else:
         return False
 
 async def get_token(bot, userid, link, file_data=""):
-    try:
-        target_id = int(userid)
-    except:
-        target_id = userid
-
+    user = await bot.get_users(userid)
     token = ''.join(random.choices(string.ascii_letters + string.digits, k=7))
-    TOKENS[target_id] = {token: False}
+    TOKENS[user.id] = {token: False}
     
-    # Clean check: Agar target link ke end mein already query parameters hain ya nahi
-    connector = "_" if "start=" in link else "="
-    
-    # 📥 Reference structure ke mutabik cleanly string parameter format design kiya hai
+    # 📥 File data ko verification link ke sath embed kar rahe hain taaki Get File button work kare
     if file_data:
-        # verify-userid-token-filedata format
-        verification_path = f"verify-{target_id}-{token}-{file_data}"
+        link = f"{link}verify-{user.id}-{token}-{file_data}"
     else:
-        verification_path = f"verify-{target_id}-{token}"
+        link = f"{link}verify-{user.id}-{token}"
         
-    # Final clean payload generation
-    final_url = f"{link}{connector}{verification_path}" if not link.endswith("=") else f"{link}{verification_path}"
-        
-    shortened_verify_url = await get_verify_shorted_link(final_url)
+    shortened_verify_url = await get_verify_shorted_link(link)
     return str(shortened_verify_url)
 
 async def verify_user(bot, userid, token):
-    try:
-        target_id = int(userid)
-    except:
-        target_id = userid
-
-    # Token ko memory mein permanently state true (Used) mark kar dete hain
-    TOKENS[target_id] = {token: True}
+    user = await bot.get_users(userid)
+    TOKENS[user.id] = {token: True}
     
-    # MongoDB database permanent verification timestamp update log
+    # MongoDB database permanent verification log
     current_time = int(time.time())
-    await db.update_verify_time(target_id, current_time)
+    await db.update_verify_time(user.id, current_time)
 
 async def check_verification(bot, userid):
-    try:
-        target_id = int(userid)
-    except:
-        target_id = userid
-        
+    user = await bot.get_users(userid)
+    
     # 👑 PREMIUM BYPASS: Agar user premium member hai toh shortlink bypass ho jayega
-    try:
-        is_premium = await db.check_premium_status(target_id)
-        if is_premium:
-            return True
-    except Exception as e:
-        logger.error(f"Premium check bypass error: {e}")
+    is_premium = await db.check_premium_status(user.id)
+    if is_premium:
+        return True
 
     # Admin panel switch control
     settings = await db.get_settings()
@@ -119,9 +88,9 @@ async def check_verification(bot, userid):
         return True  
 
     # Database se user ka last verified timestamp
-    last_verified = await db.get_verify_time(target_id)
+    last_verified = await db.get_verify_time(user.id)
     
-    if not last_verified or last_verified == 0:
+    if last_verified == 0:
         return False 
         
     # FIXED PRIORITY LOGIC HERE:
