@@ -52,33 +52,24 @@ async def handle_conversations(bot, message):
     
     # ─── 🆕 CASE C: CUSTOM BATCH MEDIA CATCHING STATE ───
     if user_id in CUSTOM_BATCH_STATE:
-        # Agar user text message bhejta hai jo koi media nahi hai, toh use ignore ya alert karein
         if not (message.document or message.video or message.audio or message.photo or message.text):
             return
             
         try:
-            # 🆕 Pichla bheja hua counter message delete karte hain agar exist karta hai
             if CUSTOM_BATCH_STATE[user_id]["last_msg_id"]:
                 try:
                     await bot.delete_messages(chat_id=message.chat.id, message_ids=CUSTOM_BATCH_STATE[user_id]["last_msg_id"])
                 except Exception:
-                    pass # Agar message pehle se manual delete ho chuka ho, toh code crash na ho
+                    pass
 
-            # Pehle is file/message ko direct DB_CHANNEL me copy karte hain safe rakhne ke liye
             copied_msg = await message.copy(DB_CHANNEL)
-            
-            # Hum save kiye gaye message ki ID store karenge JSON generation ke liye
             CUSTOM_BATCH_STATE[user_id]["files"].append({"channel_id": DB_CHANNEL, "msg_id": copied_msg.id})
-            
             total_saved = len(CUSTOM_BATCH_STATE[user_id]["files"])
             
-            # Naya updated dynamic counter message bhejte hain
             status_msg = await message.reply_text(
                 f"<b>📥 𝖥𝖨𝖫𝖤 #{total_saved} 𝖠𝖣𝖣𝖤𝖣 𝖲𝖴𝖢𝖢𝖤𝖲𝖲𝖥𝖴𝖫𝖫𝖸!</b>\n\n"
                 "<i>Aur files bhejte rahiye... Jab poora ho jaye toh /cdone send karne link nikal lein.</i>"
             )
-            
-            # Naye status message ki ID ko update kar dete hain taaki agle step par ise wipe kiya ja sake
             CUSTOM_BATCH_STATE[user_id]["last_msg_id"] = status_msg.id
 
         except Exception as e:
@@ -117,7 +108,6 @@ async def handle_conversations(bot, message):
     elif user_id in BATCH_STATE:
         state = BATCH_STATE[user_id]
         
-        # --- STEP 1: First Message Receive Karna ---
         if state["step"] == 1:
             chat_id, msg_id = extract_msg_info(message)
             if not chat_id or not msg_id:
@@ -125,7 +115,7 @@ async def handle_conversations(bot, message):
                 
             state["first_chat"] = chat_id
             state["first_msg"] = msg_id
-            state["step"] = 2  # Agle step par move karein
+            state["step"] = 2
             
             await message.reply_text(
                 "<b>Forward The Last Message From Your Batch Channel (With Forward Tag)... Or Give Me Last Message Link From Your Batch Channel\n\n"
@@ -133,7 +123,6 @@ async def handle_conversations(bot, message):
             )
             message.stop_propagation()
             
-        # --- STEP 2: Last Message Receive Aur Processing Karna ---
         elif state["step"] == 2:
             chat_id, msg_id = extract_msg_info(message)
             if not chat_id or not msg_id:
@@ -144,7 +133,6 @@ async def handle_conversations(bot, message):
             l_chat_id = chat_id
             l_msg_id = msg_id
             
-            # State ko turant delete karein taaki data clear ho jaye
             del BATCH_STATE[user_id]
             
             if f_chat_id != l_chat_id:
@@ -188,7 +176,9 @@ async def handle_conversations(bot, message):
             file_id = base64.urlsafe_b64encode(string.encode("ascii")).decode().strip("=")
             
             user = await get_user(user_id)
-            share_link = f"{WEBSITE_URL}?Tech_VJ=BATCH-{file_id}" if WEBSITE_URL_MODE else f"https://t.me/{username}?start=BATCH-{file_id}"
+            
+            # 🛠️ MODIFIED: 'BATCH-' ko yahan se bilkul hata diya gaya hai
+            share_link = f"{WEBSITE_URL}?Tech_VJ={file_id}" if WEBSITE_URL_MODE else f"https://t.me/{username}?start={file_id}"
             
             if user["base_site"] and user["shortener_api"] != None:
                 short_link = await get_short_link(user, share_link)
@@ -248,15 +238,13 @@ async def gen_link_batch(bot, message):
     )
 
 
-# 🛠️ 5. 🆕 COMMAND HANDLER: /cbatch (START CUSTOM BATCH MODE)
+# 🛠️ 5. 🆕 COMMAND HANDLER: /cbatch
 @Client.on_message(filters.command(['cbatch']) & filters.private & filters.create(allowed))
 async def start_custom_batch(bot, message):
     user_id = message.from_user.id
-    
     if user_id in AWAITING_CONTENT: AWAITING_CONTENT[user_id] = False
     if user_id in BATCH_STATE: del BATCH_STATE[user_id]
     
-    # 🆕 Structure converted to dict to track "last_msg_id" and "files" array separate
     CUSTOM_BATCH_STATE[user_id] = {
         "last_msg_id": None,
         "files": []
@@ -271,7 +259,7 @@ async def start_custom_batch(bot, message):
     )
 
 
-# 🛠️ 6. 🆕 COMMAND HANDLER: /cdone (GENERATE LINK FOR CUSTOM BATCH)
+# 🛠️ 6. 🆕 COMMAND HANDLER: /cdone
 @Client.on_message(filters.command(['cdone']) & filters.private & filters.create(allowed))
 async def complete_custom_batch(bot, message):
     user_id = message.from_user.id
@@ -283,7 +271,6 @@ async def complete_custom_batch(bot, message):
     outlist = CUSTOM_BATCH_STATE[user_id]["files"]
     last_msg_id = CUSTOM_BATCH_STATE[user_id]["last_msg_id"]
     
-    # Final step processing par aakhiri counter message ko bhi interface se completely clean kar dete hain
     if last_msg_id:
         try:
             await bot.delete_messages(chat_id=message.chat.id, message_ids=last_msg_id)
@@ -310,7 +297,9 @@ async def complete_custom_batch(bot, message):
         file_id = base64.urlsafe_b64encode(string.encode("ascii")).decode().strip("=")
         
         user = await get_user(user_id)
-        share_link = f"{WEBSITE_URL}?Tech_VJ=BATCH-{file_id}" if WEBSITE_URL_MODE else f"https://t.me/{username}?start=BATCH-{file_id}"
+        
+        # 🛠️ MODIFIED: 'BATCH-' ko yahan se bhi bilkul hata diya gaya hai
+        share_link = f"{WEBSITE_URL}?Tech_VJ={file_id}" if WEBSITE_URL_MODE else f"https://t.me/{username}?start={file_id}"
         
         if user["base_site"] and user["shortener_api"] != None:
             short_link = await get_short_link(user, share_link)
