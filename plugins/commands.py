@@ -99,7 +99,7 @@ async def start(client, message):
             InlineKeyboardButton('⁉️ Sᴇᴛᴛɪ年gs ⁉️', callback_data='open_admin_from_start')
         ]]
         if CLONE_MODE == True:
-            buttons.append([InlineKeyboardButton('🤖 ᴄʀᴇᴀᴛᴇ ʏᴏᴜʀ ᴏᴡɴ ᴄʟᴏɴᴇ ʙᴏᴛ', callback_data='clone')])
+            buttons.append([InlineKeyboardButton('🤖 ᴄʀᴇᴀᴛе ʏᴏᴜʀ ᴏᴡɴ ᴄʟᴏɴᴇ ʙᴏᴛ', callback_data='clone')])
         reply_markup = InlineKeyboardMarkup(buttons)
         me = client.me
         
@@ -120,20 +120,26 @@ async def start(client, message):
 
     data = message.command[1]
     
-    # 1. HANDLE VERIFICATION LINKS
-    if data.split("-", 1)[0] == "verify":
-        userid = data.split("-", 2)[1]
-        token = data.split("-", 3)[2]
+    # 1. HANDLE VERIFICATION LINKS (Kurigram/Pyrogram Compatible Fix)
+    if data.startswith("verify-"):
+        try:
+            parts = data.split("-", 3)
+            userid = parts[1]
+            token = parts[2]
+            original_file_param = parts[3] if len(parts) > 3 else "start"
+        except Exception as e:
+            logger.error(f"Error splitting verification data: {e}")
+            return await message.reply_text(text="<b>Invalid link format!</b>", protect_content=is_protect)
+
         if str(user_id) != str(userid):
             return await message.reply_text(text="<b>Invalid link or Expired link !</b>", protect_content=is_protect)
+            
         is_valid = await check_token(client, userid, token)
         if is_valid == True:
             await client.send_chat_action(message.chat.id, enums.ChatAction.TYPING)
             await asyncio.sleep(1)
             
-            # 🆕 Dynamic file retrieval param handle kar rahe hain verification ke baad ke liye
-            original_file_param = data.split("-", 3)[3] if len(data.split("-")) > 3 else "start"
-            
+            # 🆕 1-Click Auto Get File Button System
             get_file_btn = InlineKeyboardMarkup([[
                 InlineKeyboardButton("📥 Gᴇᴛ Fɪʟᴇ / Oᴘᴇɴ Lɪɴᴋ", url=f"https://telegram.me/{username}?start={original_file_param}")
             ]])
@@ -156,11 +162,10 @@ async def start(client, message):
         if not is_user_premium: 
            if settings.get("premium_mode", False):
                buy_btn = InlineKeyboardMarkup([[InlineKeyboardButton("👑 Buy Premium", url=premium_buy_link)]])
-               await message.reply_text("👑 **यह फाइल प्रीमियम है!**\n\nइसे एक्सेस करने के लिए कृपया प्रीमियम लें।\n\n☂️ ᴛʜɪs ᴄᴏɴᴛᴇɴᴛ ɪs ᴘʀᴇᴍɪᴜᴍ ᴘʀᴏᴛᴇᴄᴛᴇᴅ,\n ᴏɴʟʏ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ ᴄᴀɴ ᴀᴄᴄᴇss ᴛʜɪs ʟɪнк ᴄᴏɴᴛᴇɴᴛ.\n\n🔎 ᴄʟɪᴄᴋ ᴏɴ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", reply_markup=buy_btn)
+               await message.reply_text("👑 **यह फाइल प्रीमियम है!**\n\nइसे एक्सेस करने के लिए कृपया प्रीमियम लें।\n\n☂️ ᴛʜɪs ᴄᴏɴᴛᴇɴᴛ ɪs ᴘʀᴇᴍɪᴜᴍ ᴘʀᴏᴛᴇᴄᴛᴇᴅ,\n ᴏɴʟʏ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ ᴄᴀɴ ᴀᴄᴄᴇss ᴛʜɪs ʟɪɴᴋ ᴄᴏɴᴛᴇɴᴛ.\n\n🔎 ᴄʟɪᴄᴋ ᴏɴ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", reply_markup=buy_btn)
                return 
         
         if not is_premium and is_verify_mode == True and not await check_verification(client, user_id):
-            # 🛠️ FIXED: Yahan 'data' parameter ko safely string formatting ke sath bypass kiya hai taaki shortener crash na ho
             redirect_url = f"https://telegram.me/{username}?start={str(data)}"
             token_url = await get_token(client, user_id, redirect_url)
             
