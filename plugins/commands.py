@@ -73,7 +73,7 @@ async def start(client, message):
     
     # Dynamic Start Photo, Spoiler aur Text settings handle karna
     start_photo = settings.get("start_photo", None)
-    is_spoiler = settings.get("start_spoiler", False) 
+    is_spoiler = settings.get("start_spoiler", False) # 🌟 Fetching spoiler settings dynamically
     db_start_text = settings.get("custom_start_text", None)
     
     # Premium purchase link from admin configuration
@@ -96,7 +96,7 @@ async def start(client, message):
             InlineKeyboardButton('💁‍♀️ Fᴇᴀᴛᴜʀᴇs', callback_data='help'),
             InlineKeyboardButton('😊 Aʙᴏᴜᴛ', callback_data='about')
         ],[
-            InlineKeyboardButton('⁉️ Sᴇᴛᴛɪ年gs ⁉️', callback_data='open_admin_from_start')
+            InlineKeyboardButton('⁉️ Sᴇᴛᴛɪ年ɢs ⁉️', callback_data='open_admin_from_start')
         ]]
         if CLONE_MODE == True:
             buttons.append([InlineKeyboardButton('🤖 ᴄʀᴇᴀᴛᴇ ʏᴏᴜʀ ᴏᴡɴ ᴄʟᴏɴᴇ ʙᴏᴛ', callback_data='clone')])
@@ -108,7 +108,7 @@ async def start(client, message):
                 photo=start_photo,
                 caption=start_caption.format(message.from_user.mention, me.mention),
                 reply_markup=reply_markup,
-                has_spoiler=is_spoiler 
+                has_spoiler=is_spoiler # 🌟 Applied dynamic spoiler toggle here
             )
         else:
             await message.reply_text(
@@ -131,18 +131,9 @@ async def start(client, message):
             await client.send_chat_action(message.chat.id, enums.ChatAction.TYPING)
             await asyncio.sleep(1)
             
-            # 🆕 1-Click Auto Get File Button System joda gaya hai
-            # Yahan hum check kar rahe hain ki agar backup link pada hai toh wahi user ko bypass button mein dein
-            original_file_param = data.split("-", 3)[3] if len(data.split("-")) > 3 else "start"
-            
-            get_file_btn = InlineKeyboardMarkup([[
-                InlineKeyboardButton("📥 Gᴇᴛ Fɪʟᴇ / Oᴘᴇɴ Lɪɴᴋ", url=f"https://telegram.me/{username}?start={original_file_param}")
-            ]])
-            
             success_msg = await message.reply_text(
-                text=script.VERIFIED_SUCCESS_TXT.format(message.from_user.mention) + "\n\n<b>👇 Niche diye gaye button par click karke apni file turant lein!</b>",
-                protect_content=is_protect,
-                reply_markup=get_file_btn
+                text=script.VERIFIED_SUCCESS_TXT.format(message.from_user.mention),
+                protect_content=is_protect
             )
             asyncio.create_task(auto_delete_msg(success_msg, 300))
             await verify_user(client, userid, token)
@@ -150,7 +141,10 @@ async def start(client, message):
             return await message.reply_text(text="<b>Invalid link or Expired link !</b>", protect_content=is_protect)
         return
 
-    # 👑 PREMIUM MODE & VERIFICATION CHECK (Common Route Check)
+    # 🛠️ MODIFIED SECTION: Purane "BATCH" if-condition ko humne hata diya hai.
+    # Ab saare links (Single, Batch, Custom Batch) isi ek Single Link Model par process honge.
+
+    # 👑 PREMIUM MODE & VERIFICATION CHECK (Common for all files)
     try:
         is_user_premium = await db.check_premium_status(user_id) if hasattr(db, 'check_premium_status') else False
     
@@ -162,7 +156,7 @@ async def start(client, message):
         
         if not is_premium and is_verify_mode == True and not await check_verification(client, user_id):
             btn = [[
-                InlineKeyboardButton("🌀 泛𝙴𝚁𝙸𝙵𝚈 🌀", url=await get_token(client, user_id, f"https://telegram.me/{username}?start={data}")),
+                InlineKeyboardButton("🌀 𝚅𝙴𝚁𝙸𝙵𝚈 🌀", url=await get_token(client, user_id, f"https://telegram.me/{username}?start=")),
                 InlineKeyboardButton("⁉️ 𝚃𝚄𝚃𝙾𝚁𝙸𝙰𝙻 ⁉️", url=VERIFY_TUTORIAL)
             ]]
             not_verified_msg = await message.reply_text(
@@ -174,15 +168,6 @@ async def start(client, message):
             return
     except Exception as e:
         return await message.reply_text(f"**Error - {e}**")
-
-    # 🛠️ GLOBAL "PLEASE WAIT" LOADING MESSAGE (Ab yeh sabke liye pehle aayega)
-    processing_keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("👑 DEVELOPER", url="https://t.me/HDFILM0900_BOT")],
-        [InlineKeyboardButton("❌ CANCEL", callback_data=f"cancel_batch_{user_id}")]
-    ])
-    
-    CANCEL_PROCESSING[user_id] = False
-    sts = await message.reply(text="<b>🔺 𝙿𝙻𝙴𝙰𝚂𝙴 𝚆ait... Processing your link!</b>", reply_markup=processing_keyboard)
 
     # MAIN REDIRECT & PROCESSING SYSTEM (Single System)
     try:
@@ -196,8 +181,16 @@ async def start(client, message):
             
         msg = await client.get_messages(DB_CHANNEL, int(decode_file_id))
         
-        # ─── CASE A: AGAR FILE "Batch.json" HAI (Yani Batch/Custom Batch Link) ───
+        # 🛠️ CHECK: Agar file ".json" format mein hai, matlab yeh ek BATCH (multiple files) hai!
         if msg.document and msg.document.file_name == "Batch.json":
+            processing_keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("👑 DEVELOPER", url="https://t.me/HDFILM0900_BOT")],
+                [InlineKeyboardButton("❌ CANCEL", callback_data=f"cancel_batch_{user_id}")]
+            ])
+            
+            CANCEL_PROCESSING[user_id] = False
+            sts = await message.reply(text="<b>🔺 𝙿𝙻𝙴𝙰𝚂𝙴 𝚆ait... Fetching Batch Files!</b>", reply_markup=processing_keyboard)
+            
             file_id = data
             msgs = BATCH_FILES.get(file_id)
             
@@ -296,7 +289,7 @@ async def start(client, message):
                     pass
             return
 
-        # ─── CASE B: NORMAL SINGLE FILE LINK (Yani sirf 1 media file hai) ───
+        # 🛠️ ELSE: Agar file normal hai (Json batch nahi hai), toh use SINGLE FILE ki tarah send karo
         else:
             if msg.media:
                 media = getattr(msg, msg.media.value)
@@ -319,7 +312,7 @@ async def start(client, message):
                         InlineKeyboardButton("• ᴅᴏᴡɴʟᴏᴀᴅ •", url=download),
                         InlineKeyboardButton('• ᴡᴀᴛᴄʜ •', url=stream)
                     ],[
-                        InlineKeyboardButton("• ᴡᴀᴛᴄʜ ɪlimits ᴡᴇʙ ᴀᴘᴘ •", web_app=WebAppInfo(url=stream))
+                        InlineKeyboardButton("• ᴡᴀᴛᴄʜ ɪɴ ᴡᴇʙ ᴀᴘᴘ •", web_app=WebAppInfo(url=stream))
                     ]]
                     reply_markup=InlineKeyboardMarkup(button)
                 else:
@@ -333,9 +326,6 @@ async def start(client, message):
                 await client.send_chat_action(message.chat.id, enums.ChatAction.TYPING)
                 del_msg = await msg.copy(chat_id=user_id, protect_content=is_protect)
                 
-            # Single file bhejte hi loading text message ko delete kar dete hain
-            await sts.delete()
-
             if is_autodelete == True:
                 k = await client.send_message(chat_id = user_id, text=f"<b><u>...IMPORTANT...</u></b>\n\nThis Movie File/Video will be deleted in <b><u>{del_time_minutes} minutes</u> ... <i></b>(Due to Copyright Issues)</i>.\n\n<b><i>Please forward this File/Video to your Saved Messages and Start Download there</b>")
                 await asyncio.sleep(del_time_seconds)
@@ -351,10 +341,7 @@ async def start(client, message):
             
     except Exception as e:
         logger.error(f"Error in file delivery route: {str(e)}")
-        try:
-            await sts.delete()
-        except:
-            pass
+        pass
 
 @Client.on_message(filters.command('api') & filters.private)
 async def shortener_api_handler(client, m: Message):
