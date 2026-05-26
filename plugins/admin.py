@@ -151,7 +151,7 @@ async def get_premium_menu_layout(settings):
     text = (
         "👑 **ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ ᴄᴏɴғɪɢᴜʀᴀᴛɪᴏɴ**\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"👥 **Tᴏᴛᴀʟ Pʀᴇᴍɪᴜᴍ Usᴇʀs:** `{total_premium}`\n"
+        f"👥 **Tᴏᴛᴀʟ Pʀᴇᴍɪᴜs Usᴇrs:** `{total_premium}`\n"
         f"🔗 **Cᴜʀʀᴇɴᴛ Bᴜʏ Lɪɴᴋ:** `{current_buy_link}`\n\n"
         "Yᴏᴜ ᴄᴀɴ ᴜsᴇ ᴛʜᴇ ɪɴʟɪɴᴇ ʙᴜᴛᴛᴏɴs ʙᴇʟᴏᴡ ᴛᴏ ᴀᴅᴅ/ʀᴇᴍᴏᴠᴇ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss ғᴏʀ ᴀɴʏ ᴜsᴇʀ ᴠɪᴀ ᴛʜᴇɪʀ Tᴇʟᴇɢʀᴀᴍ UID ᴀɴᴅ sᴇᴛᴜᴘ ᴛʜᴇ 'Bᴜʏ Pʀᴇᴍɪᴜᴍ' ʟɪɴᴋ."
     )
@@ -319,7 +319,7 @@ async def admin_callback(client, query):
         step = ""
         
         if action == "add_prem":
-            prompt_text = "👑 **[sᴛᴇᴘ 1/2] sᴇɴᴅ ᴛʜᴇ ɴᴇᴡ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ's ᴜɪᴅ (ᴛᴇʟᴇɢʀᴀᴍ ɪᴅ):**\n\n*(ᴏɴʟʏ ɴᴜᴍʙᴇʀs ᴀʟʟᴏᴡᴇᴅ. ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*"
+            prompt_text = "👑 **[sᴛᴇᴘ 1/3] sᴇɴᴅ ᴛʜᴇ ɴᴇᴡ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ's ᴜɪᴅ (ᴛᴇʟᴇɢʀᴀᴍ ɪᴅ):**\n\n*(ᴏɴʟʏ ɴᴜᴍʙᴇʀs ᴀʟʟᴏᴡᴇᴅ. ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*"
             step = "add_prem_id"
         elif action == "rem_prem":
             prompt_text = "🗑️ **sᴇɴᴅ ᴛʜᴇ ᴜsᴇʀ's ᴜɪᴅ ᴛᴏ ʀᴇᴍᴏᴠᴇ ғʀᴏᴍ ᴘʀᴇᴍɪᴜᴍ:**\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*"
@@ -382,7 +382,7 @@ async def admin_state_listener(client: Client, message):
         return
 
     # ---------------------------------------------------------
-    # 🟢 ADD PREMIUM STEPS
+    # 🟢 ADD PREMIUM STEPS (UPDATED FOR DAYS & HOURS)
     # ---------------------------------------------------------
     if step == "add_prem_id":
         if not text.isdigit():
@@ -394,30 +394,62 @@ async def admin_state_listener(client: Client, message):
         ADMIN_STATE[chat_id]["target_id"] = target_id
         ADMIN_STATE[chat_id]["step"] = "add_prem_days"
         
-        ask_msg = await message.reply(f"⏱️ **[sᴛᴇᴘ 2/2] ʜᴏᴡ ᴍᴀɴʏ ᴅᴀʏs ᴏғ ᴘʀᴇᴍɪᴜᴍ sʜᴏᴜʟᴅ ʙᴇ ɢɪᴠᴇɴ ᴛᴏ ᴜsᴇʀ `{target_id}`?**\n*(ᴇxᴀᴍᴘʟᴇ: 30)*")
+        ask_msg = await message.reply(f"⏱️ **[sᴛᴇᴘ 2/3] ʜᴏᴡ ᴍᴀɴʏ ᴅᴀʏs ᴏғ ᴘʀᴇᴍɪᴜᴍ sʜᴏᴜʟᴅ ʙᴇ ɢɪᴠᴇɴ ᴛᴏ ᴜsᴇʀ `{target_id}`?**\n*(ᴇxᴀᴍᴘʟᴇ: 30, agar sirf hours dena hai toh 0 likhein)*")
         ADMIN_STATE[chat_id]["bot_msg_id"] = ask_msg.id
 
     elif step == "add_prem_days":
-        if not text.isdigit() or int(text) <= 0:
-            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ᴅᴀʏs!** ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴀ ᴘᴏsɪᴛɪᴠᴇ ɴᴜᴍʙᴇʀ.")
+        if not text.isdigit() or int(text) < 0:
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ᴅᴀʏs!** ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴀ ᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ (0 ya usse zyada).")
             ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
             return
             
-        premium_days = int(text)
+        ADMIN_STATE[chat_id]["days"] = int(text)
+        ADMIN_STATE[chat_id]["step"] = "add_prem_hours"
+        
+        ask_msg = await message.reply(f"⏱️ **[sᴛᴇᴘ 3/3] ʜᴏᴡ ᴍᴀɴʏ ᴇxᴛʀᴀ ʜᴏᴜʀs (ɢʜᴀɴᴛᴇ) sʜᴏᴜʟᴅ ʙᴇ ɢɪᴠᴇɴ?**\n*(ᴇxᴀᴍᴘʟᴇ: 6, agar sirf days dene the toh 0 likhein)*")
+        ADMIN_STATE[chat_id]["bot_msg_id"] = ask_msg.id
+
+    elif step == "add_prem_hours":
+        if not text.isdigit() or int(text) < 0:
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪญ ʜᴏᴜʀs!** ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴀ ᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ (0 ya usse zyada).")
+            ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
+            return
+            
+        premium_hours = int(text)
+        premium_days = ADMIN_STATE[chat_id]["days"]
         target_id = ADMIN_STATE[chat_id]["target_id"]
         del ADMIN_STATE[chat_id] 
         
-        expiry_date = await db.add_premium_user(target_id, premium_days)
+        if premium_days == 0 and premium_hours == 0:
+            err_msg = await message.reply("❌ **ʙᴏᴛʜ ᴅᴀʏs ᴀɴᴅ ʜᴏᴜʀs ᴄᴀɴɴᴏᴛ ʙᴇ ᴢᴇʀᴏ!** process cancelled.", reply_markup=TEMP_BACK_BTN)
+            asyncio.create_task(auto_delete_message(err_msg, 120))
+            return
+
+        # Database call with days and hours
+        expiry_date = await db.add_premium_user(target_id, days=premium_days, hours=premium_hours)
+        
         ist_timezone = pytz.timezone('Asia/Kolkata')
         ist_expiry = expiry_date.replace(tzinfo=pytz.utc).astimezone(ist_timezone)
         formatted_expiry = ist_expiry.strftime('%Y-%m-%d %H:%M IST')
         
-        success_text = f"**ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss ᴀᴅᴅᴇᴅ ᴛᴏ ᴛʜᴇ ᴜsᴇʀ ᴡɪᴛʜ ɪᴅ -\n{target_id}.**"
+        # Display plan configuration string
+        duration_str = ""
+        if premium_days > 0:
+            duration_str += f"{premium_days} ᴅᴀʏs "
+        if premium_hours > 0:
+            duration_str += f"{premium_hours} ʜᴏᴜʀs"
+            
+        success_text = f"**ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss ᴀᴅᴅᴇᴅ ᴛᴏ ᴛʜᴇ ᴜsᴇʀ ᴡɪᴛʜ ɪᴅ -\n<code>{target_id}</code> for {duration_str.strip()}.**"
         success_msg = await message.reply(success_text, reply_markup=TEMP_BACK_BTN)
         asyncio.create_task(auto_delete_message(success_msg, 120))
         
         try:
-            await client.send_message(target_id, f"🎉 **ᴄᴏɴɢʀᴀᴛᴜʟᴀᴛɪᴏɴs !!**\nʏᴏᴜʀ ᴀᴄᴄᴏᴜɴᴛ ʜᴀs ʙᴇᴇɴ ᴀᴄᴛɪᴠᴀᴛᴇᴅ ᴡɪᴛʜ **👑 ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss** ғᴏʀ **{premium_days} ᴅᴀʏs**!\n📅 **ᴇxᴘɪʀʏ ᴅᴀᴛᴇ:** `{formatted_expiry}`")
+            await client.send_message(
+                target_id, 
+                f"🎉 **ᴄᴏɴɢʀᴀᴛᴜʟᴀᴛɪᴏɴs !!**\n"
+                f"ʏᴏᴜʀ ᴀᴄᴄᴏᴜɴᴛ ʜᴀs ʙᴇᴇɴ ᴀᴄᴛɪᴠᴀᴛᴇᴅ ᴡɪᴛʜ **👑 ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss** ғᴏʀ **{duration_str.strip()}**!\n"
+                f"📅 **ᴇxᴘɪʀʏ ᴅᴀᴛᴇ:** `{formatted_expiry}`"
+            )
         except Exception as e:
             logger.error(f"Failed to notify user {target_id}: {e}")
 
