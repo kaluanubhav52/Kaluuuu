@@ -46,13 +46,16 @@ class Database:
         return user.get('verify_time', 0) if user else 0
 
     # =============================================================
-    # --- PREMIUM USER MANAGEMENT SYSTEM ---
+    # --- PREMIUM USER MANAGEMENT SYSTEM (UPDATED) ---
     # =============================================================
 
-    async def add_premium_user(self, user_id, days):
-        """User ko fixed dino ke liye premium list mein add ya update karega"""
-        # Current time mein user ke diye gaye 'days' jod kar expiry time nikalna
-        expiry_date = datetime.utcnow() + timedelta(days=int(days))
+    async def add_premium_user(self, user_id, days=0, hours=0):
+        """
+        User ko premium list mein add ya update karega.
+        Ab aap 'days' aur 'hours' dono ek sath ya alag-alag de sakte hain.
+        """
+        # current time mein days aur hours dono ko plus karke exact expiry time nikalega
+        expiry_date = datetime.utcnow() + timedelta(days=int(days), hours=int(hours))
         
         await self.premium.update_one(
             {"id": int(user_id)},
@@ -78,6 +81,21 @@ class Database:
             return False
             
         return True
+
+    async def get_remaining_premium_time(self, user_id):
+        """
+        Yeh return karega ki user ke paas kitna time bacha hai (Days aur Hours mein).
+        Agar user premium nahi hai ya expire ho chuka hai toh None return karega.
+        """
+        user = await self.premium.find_one({"id": int(user_id)})
+        if not user or user["expire_at"] < datetime.utcnow():
+            return None
+            
+        time_left = user["expire_at"] - datetime.utcnow()
+        days = time_left.days
+        hours = time_left.seconds // 3600  # Seconds ko ghanto mein badalne ke liye
+        
+        return {"days": days, "hours": hours}
 
     async def get_all_premium_users(self):
         """Sirf un users ki list nikalega jo abhi tak expire nahi hue hain"""
