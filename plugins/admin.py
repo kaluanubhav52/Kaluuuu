@@ -113,7 +113,6 @@ async def get_delete_menu_layout(settings):
 # 4. START PAGE SUB-MENU LAYOUT
 # -------------------------------------------------------------
 async def get_start_page_menu_layout(settings):
-    has_photo = "🟢 sᴇᴛ (ᴄᴜsᴛᴏᴍ)" if settings.get("start_photo") else "🔴 ɴᴏᴛ sᴇᴛ (ᴛᴇxᴛ ᴏɴʟʏ)"
     has_text = "🟢 ᴄᴜsᴛᴏᴍ ᴛᴇxᴛ ᴇɴᴀʙʟᴇᴅ" if settings.get("custom_start_text") else "⚪ ᴅᴇғᴀᴜʟᴛ ᴛᴇxᴛ ᴇɴᴀʙʟᴇᴅ"
     s_status = "🟢 ᴏɴ (ʙʟᴜʀʀᴇᴅ ɪᴍᴀɢᴇ)" if settings.get("start_spoiler", False) else "🔴 ᴏғғ (ᴄʟᴇᴀʀ ɪᴍᴀɢᴇ)"
     
@@ -151,7 +150,7 @@ async def get_premium_menu_layout(settings):
     text = (
         "👑 **ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ ᴄᴏɴғɪɢᴜʀᴀᴛɪᴏɴ**\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"👥 **Tᴏᴛᴀʟ Pʀᴇᴍɪᴜs Usᴇrs:** `{total_premium}`\n"
+        f"👥 **Tᴏᴛᴀʟ Pʀᴇᴍɪᴜᴍ Usᴇʀs:** `{total_premium}`\n"
         f"🔗 **Cᴜʀʀᴇɴᴛ Bᴜʏ Lɪɴᴋ:** `{current_buy_link}`\n\n"
         "Yᴏᴜ ᴄᴀɴ ᴜsᴇ ᴛʜᴇ ɪɴʟɪɴᴇ ʙᴜᴛᴛᴏɴs ʙᴇʟᴏᴡ ᴛᴏ ᴀᴅᴅ/ʀᴇᴍᴏᴠᴇ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss ғᴏʀ ᴀɴʏ ᴜsᴇʀ ᴠɪᴀ ᴛʜᴇɪʀ Tᴇʟᴇɢʀᴀᴍ UID ᴀɴᴅ sᴇᴛᴜᴘ ᴛʜᴇ 'Bᴜʏ Pʀᴇᴍɪᴜᴍ' ʟɪɴᴋ."
     )
@@ -166,12 +165,13 @@ async def get_premium_menu_layout(settings):
     return text, keyboard
 
 
-# 🛠️ Command Handler - /admin
-@Client.on_message(filters.command("admin") & filters.user(ADMINS))
+# 🛠️ Command Handler - /settings (Ab yeh /admin ki jagah /settings par chalega)
+@Client.on_message(filters.command("settings") & filters.user(ADMINS))
 async def admin_panel(client, message):
     settings = await db.get_settings()
     text, keyboard = await get_main_panel_layout(settings)
     await message.reply_text(text, reply_markup=keyboard)
+
 
 # 🌟 Start Command Callback
 @Client.on_callback_query(filters.regex("open_admin_from_start"))
@@ -182,7 +182,11 @@ async def open_admin_from_start(client, query):
     settings = await db.get_settings()
     text, keyboard = await get_main_panel_layout(settings)
     keyboard.inline_keyboard[-1] = [InlineKeyboardButton("ʙᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="start")]
-    await query.message.edit_text(text, reply_markup=keyboard)
+    try:
+        await query.message.edit_text(text, reply_markup=keyboard)
+    except Exception:
+        # Fallback: Agar clear cache ke chalte edit fail ho toh naya message bhej do
+        await query.message.reply_text(text, reply_markup=keyboard)
 
 
 # 🕹️ Callback Query Router
@@ -196,41 +200,56 @@ async def admin_callback(client, query):
     settings = await db.get_settings()
     chat_id = query.message.chat.id
     
-    # --- NAVIGATION SWITCHES ---
+    # --- NAVIGATION SWITCHES (With Fallback Mechanism) ---
     if action == "back_main":
         text, keyboard = await get_main_panel_layout(settings)
         if "🔙 Back to Home" in str(query.message.reply_markup):
             keyboard.inline_keyboard[-1] = [InlineKeyboardButton("🔙 ʙᴀᴄᴋ ᴛᴏ ʜᴏᴍᴇ", callback_data="start")]
-        await query.message.edit_text(text, reply_markup=keyboard)
+        try:
+            await query.message.edit_text(text, reply_markup=keyboard)
+        except Exception:
+            await client.send_message(chat_id, text, reply_markup=keyboard)
         return
     elif action == "sub_verify":
         text, keyboard = await get_verify_menu_layout(settings)
-        await query.message.edit_text(text, reply_markup=keyboard)
+        try:
+            await query.message.edit_text(text, reply_markup=keyboard)
+        except Exception:
+            await client.send_message(chat_id, text, reply_markup=keyboard)
         return
     elif action == "sub_delete":
         text, keyboard = await get_delete_menu_layout(settings)
-        await query.message.edit_text(text, reply_markup=keyboard)
+        try:
+            await query.message.edit_text(text, reply_markup=keyboard)
+        except Exception:
+            await client.send_message(chat_id, text, reply_markup=keyboard)
         return
     elif action == "sub_start_page":
         text, keyboard = await get_start_page_menu_layout(settings)
-        await query.message.edit_text(text, reply_markup=keyboard)
+        try:
+            await query.message.edit_text(text, reply_markup=keyboard)
+        except Exception:
+            await client.send_message(chat_id, text, reply_markup=keyboard)
         return
     elif action == "sub_premium":
         text, keyboard = await get_premium_menu_layout(settings)
-        await query.message.edit_text(text, reply_markup=keyboard)
+        try:
+            await query.message.edit_text(text, reply_markup=keyboard)
+        except Exception:
+            await client.send_message(chat_id, text, reply_markup=keyboard)
         return
         
     # --- BACK HANDLE FOR TEMPORARY MESSAGES ---
     elif action == "temp_back":
         try:
             await query.message.delete()
-        except:
+        except Exception:
             pass
         text, keyboard = await get_main_panel_layout(settings)
         await client.send_message(chat_id, text, reply_markup=keyboard)
         return
 
-    # --- TOGGLES ACTIONS (NO USER INPUT NEEDED) ---
+    # --- TOGGLES ACTIONS ---
     elif action == "toggle_verify":
         new_val = not settings.get("verify_mode", True)
         await db.update_setting("verify_mode", new_val)
@@ -241,7 +260,10 @@ async def admin_callback(client, query):
             await query.answer("ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴍᴏᴅᴇ ᴜᴘᴅᴀᴛᴇᴅ! ✅")
         settings = await db.get_settings()
         text, keyboard = await get_verify_menu_layout(settings)
-        await query.message.edit_text(text, reply_markup=keyboard)
+        try:
+            await query.message.edit_text(text, reply_markup=keyboard)
+        except Exception:
+            await client.send_message(chat_id, text, reply_markup=keyboard)
 
     elif action == "toggle_premium_mode":
         new_val = not settings.get("premium_mode", False)
@@ -253,7 +275,10 @@ async def admin_callback(client, query):
             await query.answer("ᴘʀᴇᴍɪᴜᴍ ᴍᴏᴅᴇ ᴜᴘᴅᴀᴛᴇᴅ! ✅")
         settings = await db.get_settings()
         text, keyboard = await get_verify_menu_layout(settings)
-        await query.message.edit_text(text, reply_markup=keyboard)
+        try:
+            await query.message.edit_text(text, reply_markup=keyboard)
+        except Exception:
+            await client.send_message(chat_id, text, reply_markup=keyboard)
         
     elif action == "toggle_delete":
         new_val = not settings.get("auto_delete_mode", True)
@@ -261,7 +286,10 @@ async def admin_callback(client, query):
         await query.answer("ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴍᴏᴅᴇ ᴜᴘᴅᴀᴛᴇᴅ! ✅")
         settings = await db.get_settings()
         text, keyboard = await get_delete_menu_layout(settings)
-        await query.message.edit_text(text, reply_markup=keyboard)
+        try:
+            await query.message.edit_text(text, reply_markup=keyboard)
+        except Exception:
+            await client.send_message(chat_id, text, reply_markup=keyboard)
         
     elif action == "toggle_protect":
         new_val = not settings.get("protect_content", False)
@@ -269,7 +297,10 @@ async def admin_callback(client, query):
         await query.answer("ᴄᴏɴᴛᴇɴᴛ ᴘʀᴏᴛᴇᴄᴛɪᴏɴ ᴜᴘᴅᴀᴛᴇᴅ! ✅")
         settings = await db.get_settings()
         text, keyboard = await get_main_panel_layout(settings)
-        await query.message.edit_text(text, reply_markup=keyboard)
+        try:
+            await query.message.edit_text(text, reply_markup=keyboard)
+        except Exception:
+            await client.send_message(chat_id, text, reply_markup=keyboard)
 
     elif action == "toggle_spoiler":
         new_val = not settings.get("start_spoiler", False)
@@ -277,22 +308,31 @@ async def admin_callback(client, query):
         await query.answer(f"sᴘᴏɪʟᴇʀ ᴍᴏᴅᴇ {'ᴇɴᴀʙʟᴇᴅ 🟢' if new_val else 'ᴅɪsᴀʙʟᴇᴅ 🔴'}")
         settings = await db.get_settings()
         text, keyboard = await get_start_page_menu_layout(settings)
-        await query.message.edit_text(text, reply_markup=keyboard)
+        try:
+            await query.message.edit_text(text, reply_markup=keyboard)
+        except Exception:
+            await client.send_message(chat_id, text, reply_markup=keyboard)
 
-    # --- RESET / LIST ACTIONS (NO USER INPUT NEEDED) ---
+    # --- RESET / LIST ACTIONS ---
     elif action == "reset_start_txt":
         await db.update_setting("custom_start_text", None) 
         await query.answer("sᴛᴀʀᴛ ᴍᴇssᴀɢᴇ ʀᴇsᴇᴛ ᴛᴏ ᴅᴇғᴀᴜʟᴛ ᴛᴇxᴛ! ⚪", show_alert=True)
         settings = await db.get_settings()
         text, keyboard = await get_start_page_menu_layout(settings)
-        await query.message.edit_text(text, reply_markup=keyboard)
+        try:
+            await query.message.edit_text(text, reply_markup=keyboard)
+        except Exception:
+            await client.send_message(chat_id, text, reply_markup=keyboard)
 
     elif action == "remove_start_img":
         await db.update_setting("start_photo", None) 
         await query.answer("sᴛᴀʀᴛ ɪᴍᴀɢᴇ sᴜᴄᴄᴇssғᴜʟʟʏ ʀᴇᴍᴏᴠᴇᴅ! 🗑️", show_alert=True)
         settings = await db.get_settings()
         text, keyboard = await get_start_page_menu_layout(settings)
-        await query.message.edit_text(text, reply_markup=keyboard)
+        try:
+            await query.message.edit_text(text, reply_markup=keyboard)
+        except Exception:
+            await client.send_message(chat_id, text, reply_markup=keyboard)
 
     elif action == "list_prem":
         try:
@@ -306,14 +346,20 @@ async def admin_callback(client, query):
             for idx, u_id in enumerate(users, start=1):
                 list_text += f"{idx}. 👤 ɪᴅ: <code>{u_id}</code>\n"
         back_keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 ʙᴀᴄᴋ", callback_data="adm_sub_premium")]])
-        await query.message.edit_text(text=list_text, reply_markup=back_keyboard)
+        try:
+            await query.message.edit_text(text=list_text, reply_markup=back_keyboard)
+        except Exception:
+            await client.send_message(chat_id, text=list_text, reply_markup=back_keyboard)
 
     # =============================================================
     # 📝 ACTIONS REQUIRING USER INPUT
     # =============================================================
     elif action in ["add_prem", "rem_prem", "set_buy_link", "set_start_txt", "set_start_img", "set_time", "set_token_time", "change_link"]:
         await query.answer() 
-        await query.message.delete()
+        try:
+            await query.message.delete()
+        except Exception:
+            pass
         
         prompt_text = ""
         step = ""
@@ -348,28 +394,33 @@ async def admin_callback(client, query):
 
 
 # =============================================================
-# 📡 UNIVERSAL MESSAGE LISTENER (With Layouts & 2 Min Auto Delete)
+# 📡 UNIVERSAL MESSAGE LISTENER (Cache-Safe Framework)
 # =============================================================
-@Client.on_message(filters.private & filters.text, group=1)
+@Client.on_message(filters.private & filters.text & filters.user(ADMINS), group=1)
 async def admin_state_listener(client: Client, message):
     chat_id = message.from_user.id
     
+    # 🌟 SAFEGUARD: Clear cache hone par agar admin state variable khali ho jaye, toh bina crash hue chupchaap yahi ruk jao
     if chat_id not in ADMIN_STATE:
         return
         
     state = ADMIN_STATE[chat_id]
-    step = state["step"]
+    step = state.get("step")
     
-    # 🧹 Remove system messaging elements
+    if not step:
+        del ADMIN_STATE[chat_id]
+        return
+
+    # Deleting old prompt components safely
     try:
         await message.delete()
-    except:
+    except Exception:
         pass
 
     if "bot_msg_id" in state:
         try:
             await client.delete_messages(chat_id, state["bot_msg_id"])
-        except:
+        except Exception:
             pass
 
     text = message.text.strip()
@@ -377,12 +428,12 @@ async def admin_state_listener(client: Client, message):
     # ❌ CANCEL PROCESS
     if text == "/cancel":
         del ADMIN_STATE[chat_id]
-        cancel_msg = await message.reply("**ᴄᴀɴᴄᴇʟʟᴇᴅ ᴛʜɪs ᴘʀᴏᴄᴇss...**", reply_markup=TEMP_BACK_BTN)
+        cancel_msg = await message.reply("** ᴄᴀɴᴄᴇʟʟᴇᴅ ᴛʜɪs ᴘʀᴏᴄᴇss...**", reply_markup=TEMP_BACK_BTN)
         asyncio.create_task(auto_delete_message(cancel_msg, 120))
         return
 
     # ---------------------------------------------------------
-    # 🟢 ADD PREMIUM STEPS (UPDATED FOR DAYS & HOURS)
+    # 🟢 ADD PREMIUM STEPS
     # ---------------------------------------------------------
     if step == "add_prem_id":
         if not text.isdigit():
@@ -394,45 +445,47 @@ async def admin_state_listener(client: Client, message):
         ADMIN_STATE[chat_id]["target_id"] = target_id
         ADMIN_STATE[chat_id]["step"] = "add_prem_days"
         
-        ask_msg = await message.reply(f"⏱️ **[sᴛᴇᴘ 2/3] ʜᴏᴡ ᴍᴀɴʏ ᴅᴀʏs ᴏғ ᴘʀᴇᴍɪᴜᴍ sʜᴏᴜʟᴅ ʙᴇ ɢɪᴠᴇɴ ᴛᴏ ᴜsᴇʀ `{target_id}`?**\n*(ᴇxᴀᴍᴘʟᴇ: 30, agar sirf hours dena hai toh 0 likhein)*")
+        ask_msg = await message.reply(f"⏱️ **[sᴛᴇᴘ 2/3] ʜᴏᴡ ᴍᴀɴʏ ᴅᴀʏs ᴏғ ᴘʀᴇᴍɪᴜᴍ sʜᴏᴜʟʙ ʙᴇ ɢɪᴠᴇɴ ᴛᴏ ᴜsᴇʀ `{target_id}`?**\n*(ᴇx: 30, agar sirf hours dena hai toh 0 likhein)*")
         ADMIN_STATE[chat_id]["bot_msg_id"] = ask_msg.id
 
     elif step == "add_prem_days":
         if not text.isdigit() or int(text) < 0:
-            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ᴅᴀʏs!** ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴀ ᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ (0 ya usse zyada).")
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ᴅᴀʏs!** ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴀ ᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ.")
             ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
             return
             
         ADMIN_STATE[chat_id]["days"] = int(text)
         ADMIN_STATE[chat_id]["step"] = "add_prem_hours"
         
-        ask_msg = await message.reply(f"⏱️ **[sᴛᴇᴘ 3/3] ʜᴏᴡ ᴍᴀɴʏ ᴇxᴛʀᴀ ʜᴏᴜʀs (ɢʜᴀɴᴛᴇ) sʜᴏᴜʟᴅ ʙᴇ ɢɪᴠᴇɴ?**\n*(ᴇxᴀᴍᴘʟᴇ: 6, agar sirf days dene the toh 0 likhein)*")
+        ask_msg = await message.reply(f"⏱️ **[sᴛᴇᴘ 3/3] ʜᴏᴡ ᴍᴀɴʏ ᴇxᴛʀᴀ ʜᴏᴜʀs (ɢʜᴀɴᴛᴇ) sʜᴏᴜʟᴅ ʙᴇ ɢɪᴠᴇɴ?**\n*(ᴇx: 6, agar sirf days dene the toh 0 likhein)*")
         ADMIN_STATE[chat_id]["bot_msg_id"] = ask_msg.id
 
     elif step == "add_prem_hours":
         if not text.isdigit() or int(text) < 0:
-            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪญ ʜᴏᴜʀs!** ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴀ ᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ (0 ya usse zyada).")
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ʜᴏᴜʀs!** ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴀ ᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ.")
             ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
             return
             
         premium_hours = int(text)
-        premium_days = ADMIN_STATE[chat_id]["days"]
-        target_id = ADMIN_STATE[chat_id]["target_id"]
+        premium_days = ADMIN_STATE[chat_id].get("days", 0)
+        target_id = ADMIN_STATE[chat_id].get("target_id")
         del ADMIN_STATE[chat_id] 
         
+        if not target_id:
+            await message.reply("❌ **sᴛᴀᴛᴇ ʟᴏsᴛ ᴅᴜᴇ ᴛᴏ ᴄᴀᴄʜᴇ ᴄʟᴇᴀʀ!** Please restart process using /settings panel.", reply_markup=TEMP_BACK_BTN)
+            return
+
         if premium_days == 0 and premium_hours == 0:
             err_msg = await message.reply("❌ **ʙᴏᴛʜ ᴅᴀʏs ᴀɴᴅ ʜᴏᴜʀs ᴄᴀɴɴᴏᴛ ʙᴇ ᴢᴇʀᴏ!** process cancelled.", reply_markup=TEMP_BACK_BTN)
             asyncio.create_task(auto_delete_message(err_msg, 120))
             return
 
-        # Database call with days and hours
         expiry_date = await db.add_premium_user(target_id, days=premium_days, hours=premium_hours)
         
         ist_timezone = pytz.timezone('Asia/Kolkata')
         ist_expiry = expiry_date.replace(tzinfo=pytz.utc).astimezone(ist_timezone)
         formatted_expiry = ist_expiry.strftime('%Y-%m-%d %H:%M IST')
         
-        # Display plan configuration string
         duration_str = ""
         if premium_days > 0:
             duration_str += f"{premium_days} ᴅᴀʏs "
@@ -469,8 +522,8 @@ async def admin_state_listener(client: Client, message):
         if is_removed:
             success_msg = await message.reply(f"**ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss ʀᴇᴍᴏᴠᴇᴅ ғᴏʀ ᴜsᴇʀ ɪᴅ -\n{target_id}.**", reply_markup=TEMP_BACK_BTN)
             try:
-                await client.send_message(target_id, "⚠️ **ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ ᴇxᴘɪʀᴇᴅ / ʀᴇᴍᴏᴠᴇᴅ**\nʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss ʜᴀs ʙᴇᴇɴ ʀᴇᴍᴏᴠᴇᴅ ғᴏʀᴡᴀʀᴅ ғʀᴏᴍ ʏᴏᴜʀ ᴀᴄᴄᴏᴜɴᴛ.")
-            except:
+                await client.send_message(target_id, "⚠️ **ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ ᴇxᴘɪʀᴇᴅ / ʀᴇᴍᴏᴠᴇᴅ**\nʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss ʜᴀs ʙᴇᴇɴ ʀᴇᴍᴏᴠᴇᴅ.")
+            except Exception:
                 pass
         else:
             success_msg = await message.reply(f"❌ **ᴜsᴇʀ ɪᴅ {target_id} ɴᴏᴛ ғᴏᴜɴᴅ ɪɴ ᴛʜᴇ ᴘʀᴇᴍɪᴜᴍ ʟɪsᴛ.**", reply_markup=TEMP_BACK_BTN)
@@ -496,7 +549,7 @@ async def admin_state_listener(client: Client, message):
         asyncio.create_task(auto_delete_message(success_msg, 120))
 
     # ---------------------------------------------------------
-    # 🖼️ SET START PHOTO (URL BASED CHANGE)
+    # 🖼️ SET START PHOTO
     # ---------------------------------------------------------
     elif step == "set_start_img":
         if not text.startswith(("http://", "https://")):
@@ -520,7 +573,7 @@ async def admin_state_listener(client: Client, message):
             success_msg = await message.reply(f"✅ **ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ sᴇᴛ ᴛᴏ {minutes} ᴍɪɴᴜᴛᴇs!**", reply_markup=TEMP_BACK_BTN)
             asyncio.create_task(auto_delete_message(success_msg, 120))
         except ValueError:
-            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!** ᴏɴʟʏ ᴄʟᴇᴀɴ ɴᴜᴍʙᴇʀs (ᴍɪɴᴜᴛᴇs) ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.")
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!** ᴏɴʟʏ ɴᴜᴍʙᴇʀs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.")
             ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
 
     # ---------------------------------------------------------
@@ -534,27 +587,27 @@ async def admin_state_listener(client: Client, message):
             success_msg = await message.reply(f"✅ **ᴛᴏᴋᴇɴ ᴠᴀʟɪᴅɪᴛʏ sᴇᴛ ᴛᴏ {hours} ʜᴏᴜʀs!**", reply_markup=TEMP_BACK_BTN)
             asyncio.create_task(auto_delete_message(success_msg, 120))
         except ValueError:
-            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!** ᴏɴʟʏ ɪɴᴛᴇɢᴇʀs/ɴᴜᴍʙᴇʀs (ʜᴏᴜʀs) ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.")
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!** ᴏɴʟʏ ɪɴᴛᴇɢᴇʀs/ɴᴜᴍʙᴇʀs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.")
             ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
 
     # ---------------------------------------------------------
-    # 🔗 SET SHORTENER (DOMAIN -> API)
+    # 🔗 SET SHORTENER
     # ---------------------------------------------------------
     elif step == "set_shortener_domain":
         if not is_valid_domain(text):
-            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ᴅᴏᴍᴀɪɴ ғᴏʀᴍᴀᴛ!** ᴜsᴇ ᴇxᴘʟɪᴄɪᴛ ᴅᴏᴍᴀɪɴ ғᴏʀᴍᴀᴛs ʟɪᴋᴇ `site.com`.")
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ᴅᴏᴍᴀɪɴ ғᴏʀᴍᴀᴛ!** ᴜsᴇ `site.com`.")
             ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
             return
             
         ADMIN_STATE[chat_id]["domain"] = text
         ADMIN_STATE[chat_id]["step"] = "set_shortener_api"
         
-        ask_msg = await message.reply("🔑 **sᴇɴᴅ ᴛʜᴇ ᴀᴘɪ ᴋᴇʏ ғᴏʀ ᴛʜᴀᴛ ᴡᴇʙsɪᴛᴇ:**\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ ᴛʜᴇ ᴘʀᴏᴄᴇss)*")
+        ask_msg = await message.reply("🔑 **sᴇɴᴅ ᴛʜᴇ ᴀᴘɪ ᴋᴇʏ ғᴏʀ ᴛʜᴀᴛ ᴡᴇʙsɪᴛᴇ:**\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*")
         ADMIN_STATE[chat_id]["bot_msg_id"] = ask_msg.id
 
     elif step == "set_shortener_api":
         if not is_valid_api(text):
-            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ᴀᴘɪ ғᴏʀᴍᴀᴛ!**\nᴀᴘɪ sᴛʀɪɴɢs sʜᴏᴜʟᴅ ᴄᴏɴᴛᴀɪɴ ɴᴏ sᴘᴀᴄᴇs.")
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ᴀᴘɪ ғᴏʀᴍᴀᴛ!**")
             ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
             return
             
@@ -567,3 +620,4 @@ async def admin_state_listener(client: Client, message):
         
         success_msg = await message.reply("✅ **sʜᴏʀᴛᴇɴᴇʀ ᴅᴇᴛᴀɪʟs ᴜᴘᴅᴀᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
         asyncio.create_task(auto_delete_message(success_msg, 120))
+
