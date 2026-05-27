@@ -57,6 +57,7 @@ def formate_file_name(file_name):
     file_name = '@HDFILM0900_BOT ' + ' '.join(filter(lambda x: not x.startswith('http') and not x.startswith('@') and not x.startswith('www.'), file_name.split()))
     return file_name
 
+
 # --- BOT ROUTING ENGINE ---
 
 @Client.on_message(filters.command("start") & filters.incoming)
@@ -87,7 +88,6 @@ async def start(client, message):
     start_photo = settings.get("start_photo", None)
     is_spoiler = settings.get("start_spoiler", False) 
     db_start_text = settings.get("custom_start_text", None)
-    premium_buy_link = settings.get("premium_buy_link", "https://t.me/HDFILM0900_BOT")
     
     start_caption = db_start_text if db_start_text else script.START_TXT
 
@@ -108,6 +108,9 @@ async def start(client, message):
             [
                 InlineKeyboardButton('💁‍♀️ Fᴇᴀᴛᴜʀᴇs', callback_data='help'),
                 InlineKeyboardButton('😊 Aʙᴏᴜᴛ', callback_data='about')
+            ],
+            [
+                InlineKeyboardButton('⭐ Buy Premium ⭐', callback_data='buy_premium_panel')
             ],
             [
                 InlineKeyboardButton('⁉️ Sᴇᴛᴛɪngs ⁉️', callback_data='open_admin_from_start')
@@ -162,9 +165,8 @@ async def start(client, message):
     # 2. Gatekeeping check logic 
     try:
         is_user_premium = await db.check_premium_status(user_id) if hasattr(db, 'check_premium_status') else False
-    
         if not is_user_premium and settings.get("premium_mode", False):
-            buy_btn = InlineKeyboardMarkup([[InlineKeyboardButton("👑 Buy Premium", url=premium_buy_link)]])
+            buy_btn = InlineKeyboardMarkup([[InlineKeyboardButton("👑 Buy Premium", callback_data='buy_premium_panel')]])
             await message.reply_text(
                 "👑 **यह फाइल प्रीमियम है!**\n\nइसे एक्सेस करने के लिए कृपया प्रीमियम लें।\n\n"
                 "☂️ ᴛʜɪs ᴄᴏɴᴛᴇɴᴛ ɪs ᴘʀᴇᴍɪᴜᴍ ᴘʀᴏᴛᴇᴄᴛᴇᴅ,\n ᴏɴʟʏ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ ᴄᴀɴ ᴀᴄᴄᴇss ᴛʜɪs ʟɪɴᴋ ᴄᴏɴᴛᴇɴᴛ.\n\n"
@@ -194,7 +196,7 @@ async def start(client, message):
         [InlineKeyboardButton("❌ CANCEL", callback_data=f"cancel_batch_{user_id}")]
     ])
     CANCEL_PROCESSING[user_id] = False
-    sts = await message.reply(text="<b>🔺 𝙿𝙻𝙴𝙰𝚂𝙴 𝚆ait... Fetching Your Request!</b>", reply_markup=processing_keyboard)
+    sts = await message.reply(text="<b>🔺 𝙿𝙻𝙴𝙰𝚂𝙴 𝚆ait</b>", reply_markup=processing_keyboard)
 
     # 3. DB Base64 Hash Processing System
     try:
@@ -353,7 +355,7 @@ async def start(client, message):
                             InlineKeyboardButton('• ᴡᴀᴛᴄʜ •', url=stream)
                         ],
                         [
-                            InlineKeyboardButton("• ᴡᴀᴛᴄʜ ɪɴ ᴡᴇʙ ᴀᴘᴘ •", web_app=WebAppInfo(url=stream))
+                            InlineKeyboardButton("• ᴡᴀᴛᴄʜ ɪＮ ᴡᴇʙ ᴀᴘᴘ •", web_app=WebAppInfo(url=stream))
                         ]
                     ]
                     reply_markup = InlineKeyboardMarkup(button)
@@ -454,6 +456,38 @@ async def cb_handler(client: Client, query: CallbackQuery):
     if query.data == "close_data":
         await query.message.delete()
         
+    elif query.data == "buy_premium_panel":
+        premium_keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("📊 Qʀ Code", callback_data="show_premium_qr"),
+                InlineKeyboardButton("💳 Uᴘɪ ID", callback_data="show_premium_upi")
+            ],
+            [InlineKeyboardButton("⬅️ Bᴀᴄᴋ", callback_data="start")]
+        ])
+        await query.message.edit_text(text=PREMIUM_PLANS_TEXT, reply_markup=premium_keyboard)
+
+    elif query.data == "show_premium_qr":
+        screenshot_keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📤 Sᴇɴᴅ Pᴀʏᴍᴇɴᴛ Sᴄʀᴇᴇɴsʜᴏᴛ", url=f"https://t.me/HDFILM0900_BOT")], # Yahan admin ya support handle ka link daal sakte hain
+            [InlineKeyboardButton("❌ Close ❌", callback_data='close_data')]
+        ])
+        await query.message.reply_photo(
+            photo=QR_IMAGE_URL,
+            caption=f"⚡ <b>PAY AMOUNT ACCORDING TO YOUR PLAN AND ENJOY PREMIUM MEMBERSHIP !</b>\n\n‼️ <b>MUST SEND SCREENSHOT AFTER PAYMENT</b>\nपेमेंट होने के बाद हमें स्क्रीनशॉट भेजें।",
+            reply_markup=screenshot_keyboard
+        )
+        await query.answer() 
+
+    elif query.data == "show_premium_upi":
+        screenshot_keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📤 Sᴇɴᴅ Pᴀʏᴍᴇɴᴛ Sᴄʀᴇᴇɴsʜᴏᴛ", url=f"https://t.me/HDFILM0900_BOT")],
+            [InlineKeyboardButton("⬅️ Bᴀᴄᴋ", callback_data="buy_premium_panel")]
+        ])
+        await query.message.edit_text(
+            text=f"👉 <b>PAY AMOUNT ACCORDING TO YOUR PLAN</b>\n\n📌 <b>UPI ID:</b> <code>{UPI_ID}</code> (Tap to copy)\n\n‼️ <b>MUST SEND SCREENSHOT AFTER PAYMENT</b>\nपेमेंट होने के बाद हमें स्क्रीनशॉट भेजें।",
+            reply_markup=screenshot_keyboard
+        )
+
     elif query.data == "about":
         buttons = [[
             InlineKeyboardButton('Hᴏᴍᴇ', callback_data='start'),
@@ -485,6 +519,9 @@ async def cb_handler(client: Client, query: CallbackQuery):
             [
                 InlineKeyboardButton('💁‍♀️ Fᴇᴀᴛᴜʀᴇs', callback_data='help'),
                 InlineKeyboardButton('😊 Aʙᴏᴜᴛ', callback_data='about')
+            ],
+            [
+                InlineKeyboardButton('⭐ Buy Premium ⭐', callback_data='buy_premium_panel')
             ],
             [
                 InlineKeyboardButton('⁉️ Sᴇᴛᴛings ⁉️', callback_data='open_admin_from_start')

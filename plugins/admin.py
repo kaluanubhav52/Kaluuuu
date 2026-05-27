@@ -50,23 +50,43 @@ async def get_main_panel_layout(settings):
     ])
     return text, keyboard
 
+# 🔥 UPDATED: Added Live Token Progress Bar Logic Inside Verification Layout
 async def get_verify_menu_layout(settings):
     v_status = "🟢 ᴏɴ" if settings.get("verify_mode", True) else "🔴 ᴏғғ"
     prem_mode_status = "🟢 ᴏɴ" if settings.get("premium_mode", False) else "🔴 ᴏғғ"
     v_expire_hours = settings.get("verify_expire_time", 86400) // 3600
+    
+    # 📊 Live Token Progress Bar Settings
+    try:
+        today_tokens = await db.get_today_tokens()
+    except Exception:
+        today_tokens = 0
+        
+    daily_target = 1000  # Aap apna target change kar sakte ho (e.g. 500, 1000, 2000)
+    percentage = min(int((today_tokens / daily_target) * 100), 100)
+    
+    # Custom Progress Bar Build
+    bar_length = 10
+    filled_length = int(bar_length * percentage // 100)
+    bar = "█" * filled_length + "░" * (bar_length - filled_length)
+    
     text = (
         "🔐 **ᴍᴀɴᴀɢᴇ ʏᴏᴜʀ ᴛᴏᴋᴇɴ ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ sᴇᴛᴛɪɴɢs**\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "⚠️ *Nᴏᴛᴇ: Oɴʟʏ ᴏɴᴇ ᴍᴏᴅᴇ ᴄᴀɴ ʀᴜɴ ᴀᴛ ᴀ ᴛɪᴍᴇ, ᴇɪᴛʜᴇʀ Vᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴏʀ Pʀᴇᴍɪᴜ-- Mᴏᴅᴇ.*\n\n"
+        "⚠️ *Nᴏᴛᴇ: Oɴʟʏ ᴏɴᴇ ᴍᴏᴅᴇ ᴄᴀɴ ʀᴜɴ ᴀᴛ ᴀ ᴛɪᴍᴇ, ᴇɪᴛʜᴇʀ Vᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴏʀ Pʀᴇᴍɪᴜᴍ Mᴏᴅᴇ.*\n\n"
         f"🔗 **Sʜᴏʀᴛᴇɴᴇʀ Sɪᴛᴇ:** `{settings.get('shortlink_url')}`\n"
         f"🔑 **Sʜᴏʀᴛᴇɴᴇʀ API:** `{settings.get('shortlink_api')}`\n"
-        f"⏱️ **Tᴏᴋᴇɴ Vᴀʟɪᴅɪᴛʏ:** `{v_expire_hours} Hᴏᴜʀs`"
+        f"⏱️ **Tᴏᴋᴇɴ Vᴀʟɪᴅɪᴛʏ:** `{v_expire_hours} Hᴏᴜʀs`\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📊 **ᴛᴏᴅᴀʏ's ʟɪᴠᴇ ᴛᴏᴋᴇɴs:** `{today_tokens}/{daily_target}`\n"
+        f"📈 **ᴘʀᴏɢʀᴇss:** `[{bar}] {percentage}%`"
     )
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton(f"ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴍᴏᴅᴇ: {v_status}", callback_data="adm_toggle_verify")],
         [InlineKeyboardButton(f"ᴘʀᴇᴍɪᴜᴍ ᴍᴏᴅᴇ: {prem_mode_status}", callback_data="adm_toggle_premium_mode")],
         [InlineKeyboardButton("sᴇᴛ ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴛɪᴍᴇ 🔑", callback_data="adm_set_token_time")],
         [InlineKeyboardButton("sᴇᴛ sʜᴏʀᴛᴇɴᴇʀ ᴀᴘɪ ɪᴅ 🔗", callback_data="adm_change_link")],
+        [InlineKeyboardButton("🔄 ʀᴇғʀᴇsʜ sᴛᴀᴛs", callback_data="adm_sub_verify")],  # Loop response refresh key
         [InlineKeyboardButton("ʙᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="adm_back_main")]
     ])
     return text, keyboard
@@ -77,7 +97,7 @@ async def get_delete_menu_layout(settings):
     text = (
         "⏱️ **ʜᴇʀᴇ ʏᴏᴜ ᴄᴀɴ ᴍᴀɴᴀɢᴇ ʏᴏᴜʀ ʙᴏᴛ ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ sᴇᴛᴛɪɴɢ.**\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"⏱️ **\x00\x00ᴇʟᴇᴛᴇ ᴛɪᴍᴇ:** `{del_time} Mɪɴᴜᴛᴇs`"
+        f"⏱️ **ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇ:** `{del_time} Mɪɴᴜᴛᴇs`"
     )
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton(f"ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ ᴍᴏᴅᴇ: {d_status}", callback_data="adm_toggle_delete")],
@@ -258,7 +278,7 @@ async def admin_callback(client, query):
     elif action == "toggle_spoiler":
         new_val = not settings.get("start_spoiler", False)
         await db.update_setting("start_spoiler", new_val)
-        await query.answer(f"sᴘᴏɪʟᴇʀ ᴍᴏᴅᴇ {'ᴇɴᴀʙʟᴇᴅ 🟢' if new_val else 'ᴅɪsᴀʙʟᴇᴅ 🔴'}")
+        await query.answer(f"sᴘᴏɪʟᴇʀ ᴍᴏᴅᴇ {'ᴇɴᴀʙʟᴇᴅ 🟢' if new_val else 'ᴅɪsᴀʙʟᴇdisabled 🔴'}")
         settings = await db.get_settings()
         text, keyboard = await get_start_page_menu_layout(settings)
         try:
@@ -286,7 +306,6 @@ async def admin_callback(client, query):
         except Exception:
             await client.send_message(chat_id, text, reply_markup=keyboard)
 
-    # 👑 UPDATED: Premium user list ab bacha hua time (Days aur Hours) bhi dikhaegi
     elif action == "list_prem":
         try:
             users = await db.get_all_premium_users_with_time()
@@ -301,7 +320,6 @@ async def admin_callback(client, query):
                 u_id = user["id"]
                 expire_at = user["expire_at"]
                 
-                # Bache hue time ki calculation
                 time_left = expire_at - current_time
                 days = time_left.days
                 hours = time_left.seconds // 3600
@@ -464,7 +482,7 @@ async def admin_state_listener(client: Client, message):
     elif step == "set_buy_link":
         del ADMIN_STATE[chat_id]
         await db.update_setting("premium_buy_link", text)
-        success_msg = await message.reply(f"✅ **ᴘʀᴇᴍɪᴜᴍ ʙᴜʏ ʟɪɴᴋ ᴜᴘᴅᴀᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
+        success_msg = await message.reply(f"✅ **ᴘʀᴇᴍɪᴜᴍ ʙᴜʏ ʟɪɴᴋ ᴜᴘᴅᴀ態ᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
         asyncio.create_task(auto_delete_message(success_msg, 120))
 
     elif step == "set_start_txt":
@@ -530,34 +548,24 @@ async def admin_state_listener(client: Client, message):
 
 
 # =============================================================
-# 🔔 ⚠️ AUTOMATIC BACKGROUND EXPIRY MONITOR (CRON JOB)
+# 🔔 AUTOMATIC BACKGROUND EXPIRY MONITOR (CRON JOB)
 # =============================================================
 async def premium_expiry_monitor(client: Client):
-    """
-    Background Task: Yeh har 60 seconds mein khud se chalega, expired users 
-    ko remove karega aur unhe notification alert bhejega!
-    """
     while True:
         try:
             current_time = datetime.utcnow()
-            # Database se sabhi expired documents nikaalo
             expired_cursor = db.premium.find({"expire_at": {"$lte": current_time}})
             expired_users = await expired_cursor.to_list(length=100)
             
             for user in expired_users:
                 target_id = user["id"]
-                
-                # Database se premium record delete karo
                 await db.remove_premium_user(target_id)
                 
-                # User ko inbox mein automatic notification bhej do
                 try:
                     await client.send_message(
                         chat_id=int(target_id),
                         text=(
-                            "⚠️ **ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ ᴇxᴘɪʀᴇᴅ!**\n\n"
-                            "Aapka premium subscription plan automatic samapt ho gaya hai.\n"
-                            "Services ko bina rukawat ke use karne ke liye kripya admin se sampark karein aur renew karwayein."
+                            "⚠️ **ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ ᴇxᴘɪʀᴇᴅ / ʀᴇᴍᴏᴠᴇᴅ**\nʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss ʜᴀs ʙᴇᴇɴ ʀᴇᴍᴏᴠᴇᴅ"
                         )
                     )
                     logger.info(f"[Auto-Expiry] Notification successfully sent to {target_id}")
@@ -567,5 +575,4 @@ async def premium_expiry_monitor(client: Client):
         except Exception as e:
             logger.error(f"[Auto-Expiry Loop Error]: {e}")
             
-        # Har 1 minute baad dubara check lagaye
         await asyncio.sleep(60)

@@ -45,6 +45,30 @@ class Database:
         user = await self.col.find_one({'id': int(user_id)})
         return user.get('verify_time', 0) if user else 0
 
+        # =============================================================
+    # 🔑 LIVE TOKEN TRACKER SYSTEM
+    # =============================================================
+
+    async def get_today_string(self):
+        """Aaj ki date nikalega (YYYY-MM-DD) taaki daily track ho sake"""
+        return datetime.utcnow().strftime("%Y-%m-%d")
+
+    async def increment_token_count(self):
+        """Jab bhi koi user naya token/shortlink generate karega, yeh +1 karega"""
+        today = await self.get_today_string()
+        await self.settings.update_one(
+            {"_id": f"tokens_{today}"},
+            {"$inc": {"count": 1}},
+            upsert=True
+        )
+
+    async def get_today_tokens(self):
+        """Aaj total kitne tokens generate hue, woh nikalega"""
+        today = await self.get_today_string()
+        data = await self.settings.find_one({"_id": f"tokens_{today}"})
+        return data.get("count", 0) if data else 0
+        
+
     # =============================================================
     # --- PREMIUM USER MANAGEMENT SYSTEM (UPDATED) ---
     # =============================================================
