@@ -4,7 +4,7 @@ class script(object):
 
 ᴛᴏ ᴋɴᴏᴡ ᴍᴏʀᴇ ᴄʟɪᴄᴋ ʜᴇʟᴘ ʙᴜᴛᴛᴏɴ.</blockquote></b>
 
-<b><spoiler>🔋 ᴍᴀɪɴᴛᴀɪɴᴇᴅ ʙʏ - <a href=https://t.me/hdfilm0900_bot>╰‿╯ ＫＡ ＬＵ u ꔪ</b></spoiler></a>"""
+<spoiler>🔋 ᴍᴀɪɴᴛᴀɪɴᴇᴅ ʙʏ -  @HDFILM0900_BOT</spoiler>"""
 
     CAPTION = """<b><blockquote>📂 ғɪʟᴇɴᴀᴍᴇ : {file_name}
 
@@ -37,14 +37,10 @@ If You Want To Remove Api Then Copy This And Send To Bot - `/api None`"""
 # Ask Doubt on telegram @KingVJ01
 
     ABOUT_TXT = """<b><blockquote>🤖 ᴍʏ ɴᴀᴍᴇ: {}
-
 📝 ʟᴀɴɢᴜᴀɢᴇ: 𝐏𝐲𝐭𝐡𝐨𝐧𝟑
-
 📚 ʟɪʙʀᴀʀʏ: 𝐏𝐲𝐫ᴏ𝐠𝐫𝐚𝐦
-
-🧑🏻‍💻 ᴅᴇᴠᴇʟᴏᴘᴇʀ: <a href=https://t.me/HDFILM0900_BOT>╰‿╯ ＫＡ ＬＵ u ꔪ</a>
-
-👥 STORY GROUP: <a href=https://t.me/pratilipifm0900>CLICK HERE </a></b></blockquote>"""
+🧑🏻‍💻 ᴅᴇᴠᴇʟᴏᴘᴇʀ: @HDFILM0900_BOT
+👥 STORY GROUP: @pratilipifm0900</b></blockquote>"""
 
     CABOUT_TXT = """<b>ʜɪ ɪ ᴀᴍ ᴘᴇʀᴍᴀɴᴇɴᴛ ғɪʟᴇ sᴛᴏʀᴇ ʙᴏᴛ ᴡɪᴛʜ ᴄʟᴏɴᴇ ғᴇᴀᴛᴜʀᴇ + ᴄᴜsᴛᴏᴍ ᴜʀʟ sʜᴏʀᴛɴᴇʀ ɪᴛ ᴍᴇᴀɴs ᴀɴʏ ᴜsᴇʀ ᴄᴀɴ sᴇᴛ ʜɪs ᴜʀʟ sʜᴏʀᴛɴᴇʀ ᴀɴᴅ + ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ.
 
@@ -124,3 +120,5 @@ Nᴀᴍᴇ - {}</b>"""
 ✅ ᴠᴇʀɪꜰɪᴄᴀᴛɪᴏɴ 1/1 ᴄᴏᴍᴘʟᴇᴛᴇᴅ!
 
 ʏᴏᴜ ɴᴏᴡ ʜᴀᴠᴇ ᴀᴄᴄᴇꜱꜱ ᴜɴᴛɪʟ ᴛʜᴇ ɴᴇxᴛ 1 HOURS.</b></blockquote>"""
+    
+    

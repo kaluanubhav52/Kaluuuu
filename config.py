@@ -27,11 +27,11 @@ CLONE_MODE = bool(environ.get('CLONE_MODE', False)) # Set True or False
 
 # If Clone Mode Is True Then Fill All Required Variable, If False Then Don't Fill.
 CLONE_DB_URI = environ.get("CLONE_DB_URI", "")
-CDB_NAME = environ.get("CDB_NAME", "cloneacbotz")
+CDB_NAME = environ.get("CDB_NAME", "clonekcbotz")
 
 # Database Information
 DB_URI = environ.get("DB_URI", "")
-DB_NAME = environ.get("DB_NAME", "acbotz")
+DB_NAME = environ.get("DB_NAME", "kcbotz")
 
 # Auto Delete Information
 AUTO_DELETE_MODE = bool(environ.get('AUTO_DELETE_MODE', False)) # Set True or False
@@ -41,14 +41,33 @@ AUTO_DELETE = int(environ.get("AUTO_DELETE", "30")) # Time in Minutes
 AUTO_DELETE_TIME = int(environ.get("AUTO_DELETE_TIME", "1800")) # Time in Seconds
 
 # Channel Information
-LOG_CHANNEL = int(environ.get("LOG_CHANNEL", "-1003889400872"))
-DB_CHANNEL = int(environ.get("DB_CHANNEL", "-1003616654675"))
+LOG_CHANNEL = int(environ.get("LOG_CHANNEL", "-1003793273994"))
+DB_CHANNEL = int(environ.get("DB_CHANNEL", "-1003935596893"))
 # File Caption Information
 CUSTOM_FILE_CAPTION = environ.get("CUSTOM_FILE_CAPTION", f"{script.CAPTION}")
 BATCH_FILE_CAPTION = environ.get("BATCH_FILE_CAPTION", CUSTOM_FILE_CAPTION)
 
 # Enable - True or Disable - False
 PUBLIC_FILE_STORE = is_enabled((environ.get('PUBLIC_FILE_STORE', "False")), True)
+
+# upi & qr details 
+UPI_ID = os.environ.get("UPI_ID", "6398324472@fam") 
+QR_IMAGE_URL = os.environ.get("QR_IMAGE_URL", "https://i.ibb.co/PGbZztgZ/photo-2026-05-04-16-41-38-7636287934861148164.jpg") 
+PREMIUM_PLANS_TEXT = (
+    "💳 <b>PREMIUM SUBSCRIPTION PLAN</b>\n\n"
+    "1. 15₹ = 7 DAY\n"
+    "2. 50₹ = 1 MONTH\n"
+    "3. 120₹ = 3 MONTH\n"
+    "4. 220₹ = 6 MONTH\n\n"
+    "👑 <b>PREMIUM FEATURES :</b>\n"
+    "🛑 SEARCH IN THE BOT\n"
+    "🛑 GET UNLIMITED FILES\n"
+    "🛑 NO NEED TO OPEN LINKS\n"
+    "🛑 NO NEED VERIFY\n"
+    "🛑 DIRECT FILES\n\n"
+    "➡️ CHECK YOUR ACTIVE PLAN BY USING: /myplan\n\n"
+    "‼️ <b>MUST SEND SCREENSHOT AFTER PAYMENT</b>"
+)
 
 # Verify Info :-
 VERIFY_MODE = bool(environ.get('VERIFY_MODE', True)) # Set True or False

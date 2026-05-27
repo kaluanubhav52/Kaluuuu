@@ -5,7 +5,7 @@
   AC FILE SHARING BOT 
 </h1>
 
-![Typing SVG](https://readme-typing-svg.herokuapp.com/?lines=Welcome+To+VJ-FILE-STORE-BOT;A+Highly+Advance+File+Store+Bot;Made+By+Yt-@Tech_VJ!;With+Clone+Feature+Stream/Download+Link;Custom+Url+Shortner+Auto+Delete+Feature;A+Bot+With+Fully+Advanced+Feature!;Thank+You!)
+![Typing SVG](https://readme-typing-svg.herokuapp.com/?lines=Welcome+To+AC-FILE-SHARING-BOT;A+Highly+Advance+File+Store+Bot;Made+By+Yt-@GW_KALU!;With+Clone+Feature+Stream/Download+Link;Custom+Url+Shortner+Auto+Delete+Feature;A+Bot+With+Fully+Advanced+Feature!;Thank+You!)
 </p>
 
 ### Deploy Tutorial [Video Link](https://youtu.be/VxAn9VcYtQg)
@@ -85,9 +85,10 @@
 
 <b><details><summary>Tap On Me For See Credit</summary>
 
-💝 Credit Goes To [AC BOTz](https://telegram.me/HDFILM0900_BOT)
+💝 Credit Goes To [AC BOTz](https://telegram.me/HDFILM0900_BOT). For modified with amazing features 
+ 
 
-🖍️ This Code Is Fully Written Or Coded And Public By [Tech VJ](https://github.com/VJBots) So Don't Forgot To Give Credit
+🖍️ base repo 👉 [Tech VJ](https://github.com/VJBots) 
 
 💖 And Thank You So Much To All Who Help In This Journey 💕
 
@@ -98,7 +99,7 @@
 
 
 
-### Copyright ©️ [Tech VJ](https://hdfilm0900_bot)
+### Copyright ©️ [AC BOTZ](https://hdfilm0900_bot)
 
 <b>Selling This Repo Or Code Of This Repo For Money Is Strictly Prohibited 🚫</b>
 
