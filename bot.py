@@ -47,7 +47,7 @@ from TechVJ.utils.keepalive import ping_server
 from TechVJ.bot.clients import initialize_clients
 
 # 🔔 UPDATED: Admin panel se monitor aur notification loop ko import kiya
-from plugins.admin_panel import premium_expiry_monitor
+from plugins.admin import premium_expiry_monitor
 
 # Don't Remove Credit Tg - @VJ_Bots
 # Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
