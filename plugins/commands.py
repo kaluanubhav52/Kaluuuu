@@ -24,6 +24,28 @@ from TechVJ.utils.file_properties import get_name, get_hash, get_media_file_size
 # Logging configurations
 logger = logging.getLogger(__name__)
 
+
+# global 
+original_reply = Message.reply
+async def patched_reply(self, *args, **kwargs):
+    kwargs.setdefault('quote', False)
+    return await original_reply(self, *args, **kwargs)
+Message.reply = patched_reply
+
+original_reply_text = Message.reply_text
+async def patched_reply_text(self, *args, **kwargs):
+    kwargs.setdefault('quote', False)
+    return await original_reply_text(self, *args, **kwargs)
+Message.reply_text = patched_reply_text
+
+original_reply_photo = Message.reply_photo
+async def patched_reply_photo(self, *args, **kwargs):
+    kwargs.setdefault('quote', False)
+    return await original_reply_photo(self, *args, **kwargs)
+Message.reply_photo = patched_reply_photo
+
+# end
+
 BATCH_FILES = {}
 CANCEL_PROCESSING = {}
 
