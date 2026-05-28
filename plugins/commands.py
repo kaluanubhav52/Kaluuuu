@@ -5,6 +5,7 @@ import asyncio
 import re
 import json
 import base64
+from datetime import datetime, timedelta
 from urllib.parse import quote_plus
 
 from validators import domain
@@ -124,25 +125,64 @@ async def start(client, message):
 
     data = message.command[1]
     
+    # --- FIXED VERIFICATION ROUTER ENGINE ---
     if data.split("-", 1)[0] == "verify":
-        userid = data.split("-", 2)[1]
-        token = data.split("-", 3)[2]
+        try:
+            userid = data.split("-", 2)[1]
+            token = data.split("-", 3)[2]
+        except IndexError:
+            return await message.reply_text(text="<b>❌ Malformed or Invalid Link structure!</b>", protect_content=is_protect)
+
         if str(user_id) != str(userid):
-            return await message.reply_text(text="<b>Invalid link or Expired link !</b>", protect_content=is_protect)
+            return await message.reply_text(text="<b>❌ Invalid link or Expired link !</b>", protect_content=is_protect)
         
         is_valid = await check_token(client, userid, token)
         if is_valid:
             await client.send_chat_action(message.chat.id, enums.ChatAction.TYPING)
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.5)
             
+            # Safe Database Handling Block
+            try:
+                # 1. Trigger verification status via utils
+                await verify_user(client, userid, token)
+                
+                # 2. Forced Update using Auto-Filter Database Logic (Prevents Status Mismatch)
+                from time import time
+                db_payload = {
+                    "is_verified": True,
+                    "verified_at": int(time()),
+                    "verify_token": token,
+                    "expire_time": datetime.now() + timedelta(hours=24) # 24 Hours Expiry
+                }
+                
+                # Try via user_api module
+                try:
+                    await update_user_info(int(userid), db_payload)
+                except Exception:
+                    # Fallback on 'db' object if users_api fails
+                    if hasattr(db, 'update_user'):
+                        await db.update_user(int(userid), {"is_verified": True})
+                    elif hasattr(db, 'update_verify_status'):
+                        await db.update_verify_status(int(userid), is_verified=True, expire_time=datetime.now() + timedelta(hours=24))
+                        
+                logger.info(f"Verification token state synced in database for user: {userid}")
+            except Exception as db_err:
+                logger.error(f"Non-blocking Database Log Exception: {db_err}")
+
+            # Dynamic Redirection Button so the user gets their file instantly after verification
+            # Auto-Filter Bot Reference:
+            redirect_btn = [[
+                InlineKeyboardButton("📌 GET FILE NOW 📌", url=f"https://t.me/{username}?start={token}")
+            ]]
+
             success_msg = await message.reply_text(
-                text=script.VERIFIED_SUCCESS_TXT.format(message.from_user.mention),
-                protect_content=is_protect
+                text=script.VERIFIED_SUCCESS_TXT.format(message.from_user.mention) + "\n\n<b>✅ Click below to claim your files!</b>",
+                protect_content=is_protect,
+                reply_markup=InlineKeyboardMarkup(redirect_btn)
             )
             asyncio.create_task(auto_delete_msg(success_msg, 300))
-            await verify_user(client, userid, token)
         else:
-            return await message.reply_text(text="<b>Invalid link or Expired link !</b>", protect_content=is_protect)
+            return await message.reply_text(text="<b>❌ Invalid link or Expired link !</b>", protect_content=is_protect)
         return
 
     try:
@@ -315,7 +355,7 @@ async def start(client, message):
                     stream = f"{URL}watch/{str(log_msg.id)}/{quote_plus(get_name(log_msg))}?hash={get_hash(log_msg)}"
                     download = f"{URL}{str(log_msg.id)}/{quote_plus(get_name(log_msg))}?hash={get_hash(log_msg)}"
                     button = [
-                        [InlineKeyboardButton("• ᴅᴏᴡɴʟᴏᴀᴅ •", url=download), InlineKeyboardButton('• ᴡᴀᴛᴄʜ •', url=stream)],
+                        [InlineKeyboardButton("• ᴅᴏᴡɴʟᴏᴀᴅ •", url=download), InlineKeyboardButton('• ᴡᴀᴛᴄ健 •', url=stream)],
                         [InlineKeyboardButton("• ᴡᴀᴛᴄʜ ɪＮ ᴡᴇʙ ᴀᴘᴘ •", web_app=WebAppInfo(url=stream))]
                     ]
                     reply_markup = InlineKeyboardMarkup(button)
@@ -414,7 +454,6 @@ async def cb_handler(client: Client, query: CallbackQuery):
             [InlineKeyboardButton("⬅️ Bᴀᴄᴋ", callback_data="start")]
         ])
         
-        # Safe switch over logic
         try:
             await query.message.edit_text(text=PREMIUM_PLANS_TEXT, reply_markup=premium_keyboard)
         except Exception:
@@ -473,7 +512,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             [InlineKeyboardButton('⁉️ Sᴇᴛᴛings ⁉️', callback_data='open_admin_from_start')]
         ]
         if CLONE_MODE:
-            buttons.append([InlineKeyboardButton('🤖 ᴄʀᴇᴀᴛᴇ ʏᴏᴜʀ ᴏᴡɴ ᴄʟᴏɴᴇ ʙᴏᴛ', callback_data='clone')])      
+            buttons.append([InlineKeyboardButton('🤖 ᴄʀᴇᴀᴛᴇ ʏᴏᴜң ᴏᴡɴ ᴄʟᴏɴᴇ ʙᴏᴛ', callback_data='clone')])      
         reply_markup = InlineKeyboardMarkup(buttons)
         me2 = (await client.get_me()).mention
         text_content = start_caption.format(query.from_user.mention, me2)
