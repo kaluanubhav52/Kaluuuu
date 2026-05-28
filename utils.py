@@ -4,10 +4,9 @@
 
 import logging, asyncio, os, re, random, pytz, aiohttp, requests, string, json, http.client, time
 from datetime import date, datetime
-from config import VERIFY_EXPIRE_TIME # Yeh fallback ke liye rahega
+from config import VERIFY_EXPIRE_TIME
 from shortzy import Shortzy
 from plugins.dbusers import db
-
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -43,24 +42,27 @@ async def get_verify_shorted_link(link):
             return link
 
 async def check_token(bot, userid, token):
-    user = await bot.get_users(userid)
-    if user.id in TOKENS.keys():
-        TKN = TOKENS[user.id]
+    # CRITICAL FIX: Agar token ke sath extra attributes ya hyphens hain, toh core token extract karein
+    if "-" in token:
+        token = token.split("-")[0]
+        
+    user_id = int(userid)
+    if user_id in TOKENS.keys():
+        TKN = TOKENS[user_id]
         if token in TKN.keys():
             is_used = TKN[token]
             if is_used == True:
                 return False
             else:
                 return True
-    else:
-        return False
+    return False
 
 async def get_token(bot, userid, link, file_data=""):
     user = await bot.get_users(userid)
     token = ''.join(random.choices(string.ascii_letters + string.digits, k=7))
     TOKENS[user.id] = {token: False}
     
-    # 📥 File data ko verification link ke sath embed kar rahe hain taaki Get File button work kare
+    # 📥 File data ko verification link ke sath safe attach kar rahe hain
     if file_data:
         link = f"{link}verify-{user.id}-{token}-{file_data}"
     else:
@@ -70,38 +72,37 @@ async def get_token(bot, userid, link, file_data=""):
     return str(shortened_verify_url)
 
 async def verify_user(bot, userid, token):
-    user = await bot.get_users(userid)
-    TOKENS[user.id] = {token: True}
+    if "-" in token:
+        token = token.split("-")[0]
+        
+    user_id = int(userid)
+    TOKENS[user_id] = {token: True}
     
-    # MongoDB database permanent verification log
+    # MongoDB database standard timestamp save update
     current_time = int(time.time())
-    await db.update_verify_time(user.id, current_time)
+    await db.update_verify_time(user_id, current_time)
 
 async def check_verification(bot, userid):
     user = await bot.get_users(userid)
     
-    # 👑 PREMIUM BYPASS: Agar user premium member hai toh shortlink bypass ho jayega
+    # 👑 PREMIUM BYPASS
     is_premium = await db.check_premium_status(user.id)
     if is_premium:
         return True
 
-    # Admin panel switch control
+    # Admin switch validation
     settings = await db.get_settings()
     if not settings.get("verify_mode", True):
         return True  
 
-    # Database se user ka last verified timestamp
     last_verified = await db.get_verify_time(user.id)
-    
     if last_verified == 0:
         return False 
         
-    # FIXED PRIORITY LOGIC HERE:
-    # Pehle database ki setting check hogi, agar wahan kuch nahi mila tabhi config ka fallback (VERIFY_EXPIRE_TIME) use hoga.
     db_expire_time = settings.get("verify_expire_time")
     expiry_limit = int(db_expire_time) if db_expire_time is not None else VERIFY_EXPIRE_TIME
     
     if (int(time.time()) - last_verified) > expiry_limit:
-        return False  # Expired
+        return False  
     else:
-        return True   # Valid
+        return True   
