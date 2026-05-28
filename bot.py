@@ -4,7 +4,6 @@
 
 import sys
 import glob
-import pyromod.listen 
 import importlib
 from pathlib import Path
 from pyrogram import idle
