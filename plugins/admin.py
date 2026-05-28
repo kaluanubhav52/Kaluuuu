@@ -1,17 +1,18 @@
 import asyncio
 import re
 import logging
-import pytz
-from datetime import datetime
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import ADMINS
 from plugins.dbusers import db  # Explicit import to avoid namespace issues
 from utils import *
+import pytz
+import time
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-# 🚫 ADMIN_STATE global dictionary ko poori tarah hata diya gaya hai kyunki ab pyromod sab sambhalega!
+ADMIN_STATE = {}
 
 def is_valid_domain(domain):
     pattern = r"^(?!:\/\/)([a-zA-Z0-9-_]+\.)*[a-zA-Z0-9][a-zA-Z0-9-_]+\.[a-zA-Z]{2,11}$"
@@ -49,19 +50,22 @@ async def get_main_panel_layout(settings):
     ])
     return text, keyboard
 
+# 🔥 UPDATED: Added Live Token Progress Bar Logic Inside Verification Layout
 async def get_verify_menu_layout(settings):
     v_status = "🟢 ᴏɴ" if settings.get("verify_mode", True) else "🔴 ᴏғғ"
     prem_mode_status = "🟢 ᴏɴ" if settings.get("premium_mode", False) else "🔴 ᴏғғ"
     v_expire_hours = settings.get("verify_expire_time", 86400) // 3600
     
+    # 📊 Live Token Progress Bar Settings
     try:
         today_tokens = await db.get_today_tokens()
     except Exception:
         today_tokens = 0
         
-    daily_target = 1000  
+    daily_target = 1000  # Aap apna target change kar sakte ho (e.g. 500, 1000, 2000)
     percentage = min(int((today_tokens / daily_target) * 100), 100)
     
+    # Custom Progress Bar Build
     bar_length = 10
     filled_length = int(bar_length * percentage // 100)
     bar = "█" * filled_length + "░" * (bar_length - filled_length)
@@ -82,7 +86,7 @@ async def get_verify_menu_layout(settings):
         [InlineKeyboardButton(f"ᴘʀᴇᴍɪᴜᴍ ᴍᴏᴅᴇ: {prem_mode_status}", callback_data="adm_toggle_premium_mode")],
         [InlineKeyboardButton("sᴇᴛ ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴛɪᴍᴇ 🔑", callback_data="adm_set_token_time")],
         [InlineKeyboardButton("sᴇᴛ sʜᴏʀᴛᴇɴᴇʀ ᴀᴘɪ ɪᴅ 🔗", callback_data="adm_change_link")],
-        [InlineKeyboardButton("🔄 ʀᴇғʀᴇsʜ sᴛᴀᴛs", callback_data="adm_sub_verify")],  
+        [InlineKeyboardButton("🔄 ʀᴇғʀᴇsʜ sᴛᴀᴛs", callback_data="adm_sub_verify")],  # Loop response refresh key
         [InlineKeyboardButton("ʙᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="adm_back_main")]
     ])
     return text, keyboard
@@ -274,7 +278,7 @@ async def admin_callback(client, query):
     elif action == "toggle_spoiler":
         new_val = not settings.get("start_spoiler", False)
         await db.update_setting("start_spoiler", new_val)
-        await query.answer(f"sᴘᴏɪʟᴇʀ ᴍᴏᴅᴇ {'ᴇɴᴀʙʟᴇᴅ 🟢' if new_val else 'disabled 🔴'}")
+        await query.answer(f"sᴘᴏɪʟᴇʀ ᴍᴏᴅᴇ {'ᴇɴᴀʙʟᴇᴅ 🟢' if new_val else 'ᴅɪsᴀʙʟᴇdisabled 🔴'}")
         settings = await db.get_settings()
         text, keyboard = await get_start_page_menu_layout(settings)
         try:
@@ -336,7 +340,6 @@ async def admin_callback(client, query):
         except Exception:
             await client.send_message(chat_id, text=list_text, reply_markup=back_keyboard)
 
-    # 🔥 PYROMOD FLOW ENGINE (Ab koi state loss nahi hoga kyunki loop inline chalta hai)
     elif action in ["add_prem", "rem_prem", "set_buy_link", "set_start_txt", "set_start_img", "set_time", "set_token_time", "change_link"]:
         await query.answer() 
         try:
@@ -344,225 +347,204 @@ async def admin_callback(client, query):
         except Exception:
             pass
         
-        # 👑 1. ADD PREMIUM USER FLOW
+        prompt_text = ""
+        step = ""
+        
         if action == "add_prem":
-            ask1 = await client.send_message(chat_id, "👑 **[sᴛᴇᴘ 1/3] sᴇɴᴅ ᴛʜᴇ ɴᴇᴡ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ's ᴜɪᴅ (ᴛᴇʟᴇɢʀᴀᴍ ɪᴅ):**\n\n*(ᴏɴʟʏ ɴᴜᴍʙᴇʀs ᴀʟʟᴏᴡᴇᴅ. ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*")
-            res1 = await client.listen(chat_id)
-            if res1.text.strip() == "/cancel":
-                await ask1.delete()
-                await res1.delete()
-                cancel_msg = await client.send_message(chat_id, "** ᴄᴀɴᴄᴇʟʟᴇᴅ ᴛʜɪs ᴘʀᴏᴄᴇss...**", reply_markup=TEMP_BACK_BTN)
-                asyncio.create_task(auto_delete_message(cancel_msg, 120))
-                return
-            
-            if not res1.text.strip().isdigit():
-                await ask1.delete()
-                await res1.delete()
-                await client.send_message(chat_id, "❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!** ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴀ ɴᴜᴍᴇʀɪᴄᴀʟ ᴛᴇʟᴇɢʀᴀᴍ ɪᴅ.", reply_markup=TEMP_BACK_BTN)
-                return
-            target_id = int(res1.text.strip())
-            await ask1.delete()
-            await res1.delete()
-
-            ask2 = await client.send_message(chat_id, f"⏱️ **[sᴛᴇᴘ 2/3] ʜᴏᴡ ᴍᴀɴʏ ᴅᴀʏs ᴏғ ᴘʀᴇᴍɪᴜᴍ sʜᴏᴜʟʙ ʙᴇ ɢɪᴠᴇɴ ᴛᴏ ᴜsᴇʀ `{target_id}`?**\n*(ᴇx: 30, 0 for hours)*")
-            res2 = await client.listen(chat_id)
-            if res2.text.strip() == "/cancel":
-                await ask2.delete()
-                await res2.delete()
-                return
-            if not res2.text.strip().isdigit() or int(res2.text.strip()) < 0:
-                await ask2.delete()
-                await res2.delete()
-                await client.send_message(chat_id, "❌ **ɪɴᴠᴀʟɪᴅ ᴅᴀʏs!** Process aborted.", reply_markup=TEMP_BACK_BTN)
-                return
-            premium_days = int(res2.text.strip())
-            await ask2.delete()
-            await res2.delete()
-
-            ask3 = await client.send_message(chat_id, f"⏱️ **[sᴛᴇᴘ 3/3] ʜᴏᴡ ᴍᴀɴʏ ᴇxᴛʀᴀ ʜᴏᴜʀs (ɢʜᴀɴᴛᴇ) sʜᴏᴜʟᴅ ʙᴇ ɢɪᴠᴇɴ?**\n*(ᴇx: 6, 0 for days only)*")
-            res3 = await client.listen(chat_id)
-            if res3.text.strip() == "/cancel":
-                await ask3.delete()
-                await res3.delete()
-                return
-            if not res3.text.strip().isdigit() or int(res3.text.strip()) < 0:
-                await ask3.delete()
-                await res3.delete()
-                await client.send_message(chat_id, "❌ **ɪɴᴠᴀʟɪᴅ ʜᴏᴜʀs!** Process aborted.", reply_markup=TEMP_BACK_BTN)
-                return
-            premium_hours = int(res3.text.strip())
-            await ask3.delete()
-            await res3.delete()
-
-            if premium_days == 0 and premium_hours == 0:
-                await client.send_message(chat_id, "❌ **ʙᴏᴛʜ ᴅᴀʏs ᴀɴᴅ ʜᴏᴜʀs ᴄᴀɴɴᴏᴛ ʙᴇ ᴢᴇʀᴏ!**", reply_markup=TEMP_BACK_BTN)
-                return
-
-            expiry_date = await db.add_premium_user(target_id, days=premium_days, hours=premium_hours)
-            ist_timezone = pytz.timezone('Asia/Kolkata')
-            ist_expiry = expiry_date.replace(tzinfo=pytz.utc).astimezone(ist_timezone)
-            formatted_expiry = ist_expiry.strftime('%Y-%m-%d %H:%M IST')
-            duration_str = ""
-            if premium_days > 0: duration_str += f"{premium_days} ᴅᴀʏs "
-            if premium_hours > 0: duration_str += f"{premium_hours} ʜᴏᴜʀs"
-            
-            success_msg = await client.send_message(chat_id, f"**ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss ᴀᴅᴅᴇᴅ ᴛᴏ ᴛʜᴇ ᴜsᴇʀ ᴡɪᴛʜ ɪᴅ -\n<code>{target_id}</code> for {duration_str.strip()}.**", reply_markup=TEMP_BACK_BTN)
-            asyncio.create_task(auto_delete_message(success_msg, 120))
-            try:
-                await client.send_message(
-                    target_id, 
-                    f"🎉 **ᴄᴏɴɢʀᴀᴛᴜʟᴀᴛɪᴏɴs !!**\n"
-                    f"ʏᴏᴜʀ ᴀᴄᴄᴏᴜɴᴛ ʜᴀs ʙᴇᴇɴ ᴀᴄᴛɪᴠᴀᴛᴇᴅ ᴡɪᴛʜ **👑 ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss** ғᴏʀ **{duration_str.strip()}**!\n"
-                    f"📅 **ᴇxᴘɪʀʏ ᴅᴀᴛᴇ:** `{formatted_expiry}`"
-                )
-            except Exception as e: logger.error(f"Failed to notify user {target_id}: {e}")
-
-        # 🗑️ 2. REMOVE PREMIUM USER FLOW
+            prompt_text = "👑 **[sᴛᴇᴘ 1/3] sᴇɴᴅ ᴛʜᴇ ɴᴇᴡ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ's ᴜɪᴅ (ᴛᴇʟᴇɢʀᴀᴍ ɪᴅ):**\n\n*(ᴏɴʟʏ ɴᴜᴍʙᴇʀs ᴀʟʟᴏᴡᴇᴅ. ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*"
+            step = "add_prem_id"
         elif action == "rem_prem":
-            ask = await client.send_message(chat_id, "🗑️ **sᴇɴᴅ ᴛʜᴇ ᴜsᴇʀ's ᴜɪᴅ ᴛᴏ ʀᴇᴍᴏᴠᴇ ғʀᴏᴍ ᴘʀᴇᴍɪᴜᴍ:**\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*")
-            res = await client.listen(chat_id)
-            if res.text.strip() == "/cancel":
-                await ask.delete()
-                await res.delete()
-                return
-            if not res.text.strip().isdigit():
-                await ask.delete()
-                await res.delete()
-                await client.send_message(chat_id, "❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!**", reply_markup=TEMP_BACK_BTN)
-                return
-            target_id = int(res.text.strip())
-            await ask.delete()
-            await res.delete()
-            
-            is_removed = await db.remove_premium_user(target_id)
-            if is_removed:
-                success_msg = await client.send_message(chat_id, f"**ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss ʀᴇᴍᴏᴠᴇᴅ ғᴏʀ ᴜsᴇʀ ɪᴅ -\n{target_id}.**", reply_markup=TEMP_BACK_BTN)
-                try: await client.send_message(target_id, "⚠️ **ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ ᴇxᴘɪʀᴇᴅ / ʀᴇᴍᴏᴠᴇᴅ**\nʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss ʜᴀs ʙᴇᴇɴ ʀᴇᴍᴏᴠᴇᴅ.")
-                except Exception: pass
-            else:
-                success_msg = await client.send_message(chat_id, f"❌ **ᴜsᴇʀ ɪᴅ {target_id} ɴᴏᴛ ғᴏᴜɴᴅ ɪɴ ᴛʜᴇ ᴘʀᴇᴍɪᴜᴍ ʟɪsᴛ.**", reply_markup=TEMP_BACK_BTN)
-            asyncio.create_task(auto_delete_message(success_msg, 120))
-
-        # 🔘 3. SET BUY LINK FLOW
+            prompt_text = "🗑️ **sᴇɴᴅ ᴛʜᴇ ᴜsᴇʀ's ᴜɪᴅ ᴛᴏ ʀᴇᴍᴏᴠᴇ ғʀᴏᴍ ᴘʀᴇᴍɪᴜᴍ:**\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*"
+            step = "rem_prem_id"
         elif action == "set_buy_link":
-            ask = await client.send_message(chat_id, "🔗 **sᴇɴᴅ ᴛʜᴇ ᴘʀᴇᴍɪᴜᴍ ᴘᴜʀᴄʜᴀsᴇ ʟɪɴᴋ ғᴏʀ ᴜsᴇʀs:**\n*(ᴇx: `https://t.me/your_username`)*\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*")
-            res = await client.listen(chat_id)
-            if res.text.strip() == "/cancel":
-                await ask.delete()
-                await res.delete()
-                return
-            text_val = res.text.strip()
-            await ask.delete()
-            await res.delete()
-            await db.update_setting("premium_buy_link", text_val)
-            success_msg = await client.send_message(chat_id, "✅ **ᴘʀᴇᴍɪᴜᴍ ʙᴜʏ ʟɪɴᴋ ᴜᴘᴅᴀᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
-            asyncio.create_task(auto_delete_message(success_msg, 120))
-
-        # ✍️ 4. SET START TEXT FLOW
+            prompt_text = "🔗 **sᴇɴᴅ ᴛʜᴇ ᴘʀᴇᴍɪᴜᴍ ᴘᴜʀᴄʜᴀsᴇ ʟɪɴᴋ ғᴏʀ ᴜsᴇʀs:**\n*(ᴇx: `https://t.me/your_username`)*\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*"
+            step = "set_buy_link"
         elif action == "set_start_txt":
-            ask = await client.send_message(chat_id, "✍️ **sᴇɴᴅ ᴛʜᴇ ɴᴇᴡ /start ᴍᴇssᴀɢᴇ ᴛᴇxᴛ:**\n*(ʏᴏᴜ ᴄᴀɴ ᴜsᴇ ʜᴛᴍʟ/ᴍᴀʀᴋᴅᴏᴡɴ ᴛᴀɢs)*\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*")
-            res = await client.listen(chat_id)
-            if res.text.strip() == "/cancel":
-                await ask.delete()
-                await res.delete()
-                return
-            text_val = res.text.strip()
-            await ask.delete()
-            await res.delete()
-            await db.update_setting("custom_start_text", text_val)
-            success_msg = await client.send_message(chat_id, "✅ **sᴛᴀʀᴛ ᴘᴀɢᴇ ᴍᴇssᴀɢᴇ ᴛᴇxᴛ ᴜᴘᴅᴀᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
-            asyncio.create_task(auto_delete_message(success_msg, 120))
-
-        # 🖼️ 5. SET START IMAGE URL FLOW
+            prompt_text = "✍️ **sᴇɴᴅ ᴛʜᴇ ɴᴇᴡ /start ᴍᴇssᴀɢᴇ ᴛᴇxᴛ:**\n*(ʏᴏᴜ ᴄᴀɴ ᴜsᴇ ʜᴛᴍʟ/ᴍᴀʀᴋᴅᴏᴡɴ ᴛᴀɢs)*\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*"
+            step = "set_start_txt"
         elif action == "set_start_img":
-            ask = await client.send_message(chat_id, "🖼️ **sᴇɴᴅ ᴛʜᴇ ᴜʀʟ (ʟɪɴᴋ) ᴏғ ᴛʜᴇ ɴᴇᴡ sᴛᴀʀᴛ ᴘʜᴏᴛᴏ:**\n*(ᴇxᴀᴍᴘʟᴇ: `https://site.com/image.png`)*\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*")
-            res = await client.listen(chat_id)
-            if res.text.strip() == "/cancel":
-                await ask.delete()
-                await res.delete()
-                return
-            text_val = res.text.strip()
-            await ask.delete()
-            await res.delete()
-            if not text_val.startswith(("http://", "https://")):
-                await client.send_message(chat_id, "❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!** Invalid image URL.", reply_markup=TEMP_BACK_BTN)
-                return
-            await db.update_setting("start_photo", text_val)
-            success_msg = await client.send_message(chat_id, "✅ **sᴛᴀʀᴛ ᴘᴀɢᴇ ɪᴍᴀɢᴇ ᴜʀʟ ᴜᴘᴅᴀᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
-            asyncio.create_task(auto_delete_message(success_msg, 120))
-
-        # ⏱️ 6. SET AUTO DELETE TIME FLOW
+            prompt_text = "🖼️ **sᴇɴᴅ ᴛʜᴇ ᴜʀʟ (ʟɪɴᴋ) ᴏғ ᴛʜᴇ ɴᴇᴡ sᴛᴀʀᴛ ᴘʜᴏᴛᴏ:**\n*(ᴇxᴀᴍᴘʟᴇ: `https://site.com/image.png`)*\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*"
+            step = "set_start_img"
         elif action == "set_time":
-            ask = await client.send_message(chat_id, "⏱️ **sᴇɴᴅ ᴛʜᴇ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇ ɪɴ ᴍɪɴᴜᴛᴇs:**\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ ᴛʜᴇ ᴘʀᴏᴄᴇss)*")
-            res = await client.listen(chat_id)
-            if res.text.strip() == "/cancel":
-                await ask.delete()
-                await res.delete()
-                return
-            text_val = res.text.strip()
-            await ask.delete()
-            await res.delete()
-            try:
-                minutes = int(text_val)
-                await db.update_setting("auto_delete_time", minutes * 60)
-                success_msg = await client.send_message(chat_id, f"✅ **ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ sᴇᴛ ᴛᴏ {minutes} ᴍɪɴᴜᴛᴇs!**", reply_markup=TEMP_BACK_BTN)
-                asyncio.create_task(auto_delete_message(success_msg, 120))
-            except ValueError:
-                await client.send_message(chat_id, "❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!** Only numbers allowed.", reply_markup=TEMP_BACK_BTN)
-
-        # 🔑 7. SET TOKEN VALIDITY TIME FLOW
+            prompt_text = "⏱️ **sᴇɴᴅ ᴛʜᴇ ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇ ɪɴ ᴍɪɴᴜᴛᴇs:**\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ ᴛʜᴇ ᴘʀᴏᴄᴇss)*"
+            step = "set_delete_time"
         elif action == "set_token_time":
-            ask = await client.send_message(chat_id, "🔑 **sᴇɴᴅ ᴛʜᴇ ᴛᴏᴋᴇɴ ᴠᴀʟɪᴅɪᴛʏ ᴛɪᴍᴇ ɪɴ ʜᴏᴜʀs:**\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ ᴛʜᴇ ᴘʀᴏᴄᴇss)*")
-            res = await client.listen(chat_id)
-            if res.text.strip() == "/cancel":
-                await ask.delete()
-                await res.delete()
-                return
-            text_val = res.text.strip()
-            await ask.delete()
-            await res.delete()
-            try:
-                hours = int(text_val)
-                await db.update_setting("verify_expire_time", hours * 3600)
-                success_msg = await client.send_message(chat_id, f"✅ **ᴛᴏᴋᴇɴ ᴠᴀʟɪᴅɪᴛʏ sᴇᴛ ᴛᴏ {hours} ʜᴏᴜʀs!**", reply_markup=TEMP_BACK_BTN)
-                asyncio.create_task(auto_delete_message(success_msg, 120))
-            except ValueError:
-                await client.send_message(chat_id, "❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!** Only integers allowed.", reply_markup=TEMP_BACK_BTN)
-
-        # 🔗 8. SET SHORTENER DOMAIN AND API KEY FLOW
+            prompt_text = "🔑 **sᴇɴᴅ ᴛʜᴇ ᴛᴏᴋᴇɴ ᴠᴀʟɪᴅɪᴛʏ ᴛɪᴍᴇ ɪɴ ʜᴏᴜʀs:**\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ ᴛʜᴇ ᴘʀᴏᴄᴇss)*"
+            step = "set_token_time"
         elif action == "change_link":
-            ask_domain = await client.send_message(chat_id, "🔗 **sᴇɴᴅ ᴛʜᴇ ɴᴇᴡ sʜᴏʀᴛᴇɴᴇʀ ᴅᴏᴍᴀɪɴ ɴᴀᴍᴇ:**\n*(ᴇxᴀᴍᴘʟᴇ: `site.com`)*\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ ᴛʜᴇ ᴘʀᴏᴄᴇss)*")
-            res_domain = await client.listen(chat_id)
-            if res_domain.text.strip() == "/cancel":
-                await ask_domain.delete()
-                await res_domain.delete()
-                return
-            domain_val = res_domain.text.strip()
-            await ask_domain.delete()
-            await res_domain.delete()
-            
-            if not is_valid_domain(domain_val):
-                await client.send_message(chat_id, "❌ **ɪɴᴠᴀʟɪᴅ ᴅᴏᴍᴀɪɴ ғᴏʀᴍᴀᴛ!** Use format like `site.com`.", reply_markup=TEMP_BACK_BTN)
-                return
+            prompt_text = "🔗 **sᴇɴᴅ ᴛʜᴇ ɴᴇᴡ sʜᴏʀᴛᴇɴᴇʀ ᴅᴏᴍᴀɪɴ ɴᴀᴍᴇ:**\n*(ᴇxᴀᴍᴘʟᴇ: `site.com`)*\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ ᴛʜᴇ ᴘʀᴏᴄᴇss)*"
+            step = "set_shortener_domain"
 
-            ask_api = await client.send_message(chat_id, "🔑 **sᴇɴᴅ ᴛʜᴇ ᴀᴘɪ ᴋᴇʏ ғᴏʀ ᴛʜᴀᴛ ᴡᴇʙsɪᴛᴇ:**\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*")
-            res_api = await client.listen(chat_id)
-            if res_api.text.strip() == "/cancel":
-                await ask_api.delete()
-                await res_api.delete()
-                return
-            api_val = res_api.text.strip()
-            await ask_api.delete()
-            await res_api.delete()
+        ask_msg = await client.send_message(chat_id, prompt_text)
+        ADMIN_STATE[chat_id] = {"step": step, "bot_msg_id": ask_msg.id}
 
-            if not is_valid_api(api_val):
-                await client.send_message(chat_id, "❌ **ɪɴᴠᴀʟɪᴅ ᴀᴘɪ ғᴏʀᴍᴀᴛ!** Key syntax incorrect.", reply_markup=TEMP_BACK_BTN)
-                return
+@Client.on_message(filters.private & filters.text & filters.user(ADMINS), group=1)
+async def admin_state_listener(client: Client, message):
+    chat_id = message.from_user.id
+    if chat_id not in ADMIN_STATE:
+        return
+    state = ADMIN_STATE[chat_id]
+    step = state.get("step")
+    if not step:
+        del ADMIN_STATE[chat_id]
+        return
+    try:
+        await message.delete()
+    except Exception:
+        pass
+    if "bot_msg_id" in state:
+        try:
+            await client.delete_messages(chat_id, state["bot_msg_id"])
+        except Exception:
+            pass
 
-            await db.update_setting("shortlink_url", domain_val)
-            await db.update_setting("shortlink_api", api_val)
-            success_msg = await client.send_message(chat_id, "✅ **sʜᴏʀᴛᴇɴᴇʀ ᴅᴇᴛᴀɪʟs ᴜᴘᴅᴀᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
+    text = message.text.strip()
+
+    if text == "/cancel":
+        del ADMIN_STATE[chat_id]
+        cancel_msg = await message.reply("** ᴄᴀɴᴄᴇʟʟᴇᴅ ᴛʜɪs ᴘʀᴏᴄᴇss...**", reply_markup=TEMP_BACK_BTN)
+        asyncio.create_task(auto_delete_message(cancel_msg, 120))
+        return
+
+    if step == "add_prem_id":
+        if not text.isdigit():
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!** ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴀ ɴᴜᴍᴇʀɪᴄᴀʟ ᴛᴇʟᴇɢʀᴀᴍ ɪᴅ (ᴄᴀɴᴄᴇʟ: /cancel).")
+            ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
+            return
+        target_id = int(text)
+        ADMIN_STATE[chat_id]["target_id"] = target_id
+        ADMIN_STATE[chat_id]["step"] = "add_prem_days"
+        ask_msg = await message.reply(f"⏱️ **[sᴛᴇᴘ 2/3] ʜᴏᴡ ᴍᴀɴʏ ᴅᴀʏs ᴏғ ᴘʀᴇᴍɪᴜᴍ sʜᴏᴜʟʙ ʙᴇ ɢɪᴠᴇɴ ᴛᴏ ᴜsᴇʀ `{target_id}`?**\n*(ᴇx: 30, 0 for hours)*")
+        ADMIN_STATE[chat_id]["bot_msg_id"] = ask_msg.id
+
+    elif step == "add_prem_days":
+        if not text.isdigit() or int(text) < 0:
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ᴅᴀʏs!** ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴀ ᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ.")
+            ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
+            return
+        ADMIN_STATE[chat_id]["days"] = int(text)
+        ADMIN_STATE[chat_id]["step"] = "add_prem_hours"
+        ask_msg = await message.reply(f"⏱️ **[sᴛᴇᴘ 3/3] ʜᴏᴡ ᴍᴀɴʏ ᴇxᴛʀᴀ ʜᴏᴜʀs (ɢʜᴀɴᴛᴇ) sʜᴏᴜʟᴅ ʙᴇ ɢɪᴠᴇɴ?**\n*(ᴇx: 6, 0 for days only)*")
+        ADMIN_STATE[chat_id]["bot_msg_id"] = ask_msg.id
+
+    elif step == "add_prem_hours":
+        if not text.isdigit() or int(text) < 0:
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ʜᴏᴜʀs!** ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴀ ᴠᴀʟɪᴅ ɴᴜᴍʙᴇʀ.")
+            ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
+            return
+        premium_hours = int(text)
+        premium_days = ADMIN_STATE[chat_id].get("days", 0)
+        target_id = ADMIN_STATE[chat_id].get("target_id")
+        del ADMIN_STATE[chat_id] 
+        if not target_id:
+            await message.reply("❌ **sᴛᴀᴛᴇ ʟᴏsᴛ ᴅᴜᴇ ᴛᴏ ᴄᴀᴄʜᴇ ᴄʟᴇᴀʀ!** Restart process using /settings.", reply_markup=TEMP_BACK_BTN)
+            return
+        if premium_days == 0 and premium_hours == 0:
+            err_msg = await message.reply("❌ **ʙᴏᴛʜ ᴅᴀʏs ᴀɴᴅ ʜᴏᴜʀs ᴄᴀɴɴᴏᴛ ʙᴇ ᴢᴇʀᴏ!** process cancelled.", reply_markup=TEMP_BACK_BTN)
+            asyncio.create_task(auto_delete_message(err_msg, 120))
+            return
+
+        expiry_date = await db.add_premium_user(target_id, days=premium_days, hours=premium_hours)
+        ist_timezone = pytz.timezone('Asia/Kolkata')
+        ist_expiry = expiry_date.replace(tzinfo=pytz.utc).astimezone(ist_timezone)
+        formatted_expiry = ist_expiry.strftime('%Y-%m-%d %H:%M IST')
+        duration_str = ""
+        if premium_days > 0: duration_str += f"{premium_days} ᴅᴀʏs "
+        if premium_hours > 0: duration_str += f"{premium_hours} ʜᴏᴜʀs"
+        success_text = f"**ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss ᴀᴅᴅᴇᴅ ᴛᴏ ᴛʜᴇ ᴜsᴇʀ ᴡɪᴛʜ ɪᴅ -\n<code>{target_id}</code> for {duration_str.strip()}.**"
+        success_msg = await message.reply(success_text, reply_markup=TEMP_BACK_BTN)
+        asyncio.create_task(auto_delete_message(success_msg, 120))
+        try:
+            await client.send_message(
+                target_id, 
+                f"🎉 **ᴄᴏɴɢʀᴀᴛᴜʟᴀᴛɪᴏɴs !!**\n"
+                f"ʏᴏᴜʀ ᴀᴄᴄᴏᴜɴᴛ ʜᴀs ʙᴇᴇɴ ᴀᴄᴛɪᴠᴀᴛᴇᴅ ᴡɪᴛʜ **👑 ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss** ғᴏʀ **{duration_str.strip()}**!\n"
+                f"📅 **ᴇxᴘɪʀʏ ᴅᴀᴛᴇ:** `{formatted_expiry}`"
+            )
+        except Exception as e: logger.error(f"Failed to notify user {target_id}: {e}")
+
+    elif step == "rem_prem_id":
+        if not text.isdigit():
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!** ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴀ ɴᴜᴍᴇʀɪᴄᴀʟ ᴛᴇʟᴇɢʀᴀᴍ ɪᴅ.")
+            ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
+            return
+        target_id = int(text)
+        del ADMIN_STATE[chat_id]
+        is_removed = await db.remove_premium_user(target_id)
+        if is_removed:
+            success_msg = await message.reply(f"**ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss ʀᴇᴍᴏᴠᴇᴅ ғᴏʀ ᴜsᴇʀ ɪᴅ -\n{target_id}.**", reply_markup=TEMP_BACK_BTN)
+            try: await client.send_message(target_id, "⚠️ **ᴘʀᴇᴍɪᴜᴍ ᴘʟᴀɴ ᴇxᴘɪʀᴇᴅ / ʀᴇᴍᴏᴠᴇᴅ**\nʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇss ʜᴀs ʙᴇᴇɴ ʀᴇᴍᴏᴠᴇᴅ.")
+            except Exception: pass
+        else:
+            success_msg = await message.reply(f"❌ **ᴜsᴇʀ ɪᴅ {target_id} ɴᴏᴛ ғᴏᴜɴᴅ ɪɴ ᴛʜᴇ ᴘʀᴇᴍɪᴜᴍ ʟɪsᴛ.**", reply_markup=TEMP_BACK_BTN)
+        asyncio.create_task(auto_delete_message(success_msg, 120))
+
+    elif step == "set_buy_link":
+        del ADMIN_STATE[chat_id]
+        await db.update_setting("premium_buy_link", text)
+        success_msg = await message.reply(f"✅ **ᴘʀᴇᴍɪᴜᴍ ʙᴜʏ ʟɪɴᴋ ᴜᴘᴅᴀ態ᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
+        asyncio.create_task(auto_delete_message(success_msg, 120))
+
+    elif step == "set_start_txt":
+        del ADMIN_STATE[chat_id]
+        await db.update_setting("custom_start_text", text)
+        success_msg = await message.reply("✅ **sᴛᴀʀᴛ ᴘᴀɢᴇ ᴍᴇssᴀɢᴇ ᴛᴇxᴛ ᴜᴘᴅᴀᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
+        asyncio.create_task(auto_delete_message(success_msg, 120))
+
+    elif step == "set_start_img":
+        if not text.startswith(("http://", "https://")):
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!** ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴀ ᴠᴀʟɪᴅ ɪᴍᴀɢᴇ ᴜʀʟ/ʟɪɴᴋ.")
+            ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
+            return
+        del ADMIN_STATE[chat_id]
+        await db.update_setting("start_photo", text)
+        success_msg = await message.reply("✅ **sᴛᴀʀᴛ ᴘᴀɢᴇ ɪᴍᴀɢᴇ ᴜʀʟ ᴜᴘᴅᴀᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
+        asyncio.create_task(auto_delete_message(success_msg, 120))
+
+    elif step == "set_delete_time":
+        try:
+            minutes = int(text)
+            del ADMIN_STATE[chat_id]
+            await db.update_setting("auto_delete_time", minutes * 60)
+            success_msg = await message.reply(f"✅ **ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ sᴇᴛ ᴛᴏ {minutes} ᴍɪɴᴜᴛᴇs!**", reply_markup=TEMP_BACK_BTN)
             asyncio.create_task(auto_delete_message(success_msg, 120))
+        except ValueError:
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!** ᴏɴʟʏ ɴᴜᴍʙᴇʀs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.")
+            ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
+
+    elif step == "set_token_time":
+        try:
+            hours = int(text)
+            del ADMIN_STATE[chat_id]
+            await db.update_setting("verify_expire_time", hours * 3600)
+            success_msg = await message.reply(f"✅ **ᴛᴏᴋᴇɴ ᴠᴀʟɪᴅɪᴛʏ sᴇᴛ ᴛᴏ {hours} ʜᴏᴜʀs!**", reply_markup=TEMP_BACK_BTN)
+            asyncio.create_task(auto_delete_message(success_msg, 120))
+        except ValueError:
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!** ᴏɴʟʏ ɪɴᴛᴇɢᴇʀs/ɴᴜᴍʙᴇʀs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.")
+            ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
+
+    elif step == "set_shortener_domain":
+        if not is_valid_domain(text):
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ᴅᴏᴍᴀɪɴ ғᴏʀᴍᴀᴛ!** ᴜsᴇ `site.com`.")
+            ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
+            return
+        ADMIN_STATE[chat_id]["domain"] = text
+        ADMIN_STATE[chat_id]["step"] = "set_shortener_api"
+        ask_msg = await message.reply("🔑 **sᴇɴᴅ ᴛʜᴇ ᴀᴘɪ ᴋᴇʏ ғᴏʀ ᴛʜᴀᴛ ᴡᴇʙsɪᴛᴇ:**\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*")
+        ADMIN_STATE[chat_id]["bot_msg_id"] = ask_msg.id
+
+    elif step == "set_shortener_api":
+        if not is_valid_api(text):
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ᴀᴘɪ ғᴏʀᴍᴀᴛ!**")
+            ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
+            return
+        domain = ADMIN_STATE[chat_id]["domain"]
+        api = text
+        del ADMIN_STATE[chat_id]
+        await db.update_setting("shortlink_url", domain)
+        await db.update_setting("shortlink_api", api)
+        success_msg = await message.reply("✅ **sʜᴏʀᴛᴇɴᴇʀ ᴅᴇᴛᴀɪʟs ᴜᴘᴅᴀᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
+        asyncio.create_task(auto_delete_message(success_msg, 120))
 
 
 # =============================================================
