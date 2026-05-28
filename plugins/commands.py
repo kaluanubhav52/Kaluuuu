@@ -124,8 +124,8 @@ async def start(client, message):
                 InlineKeyboardButton('💁‍♀️ Fᴇᴀᴛᴜʀᴇs', callback_data='help'),
                 InlineKeyboardButton('😊 Aʙᴏᴜᴛ', callback_data='about')
             ],
-            [InlineKeyboardButton('⭐ Buy Premium ⭐', callback_data='buy_premium_panel')],
-            [InlineKeyboardButton('⁉️ Sᴇᴛᴛɪɴɢs ⁉️', callback_data='open_admin_from_start')]
+            [InlineKeyboardButton('⭐ Buy Premium ⭐', callback_data='buy_premium_panel', style=enums.ButtonStyle.DANGER)],
+            [InlineKeyboardButton('⁉️ Sᴇᴛᴛɪɴɢs ⁉️', callback_data='open_admin_from_start', style=enums.ButtonStyle.PRIMARY)]
         ]
         if CLONE_MODE:
             buttons.append([InlineKeyboardButton('🤖 ᴄʀᴇᴀᴛᴇ ʏᴏᴜʀ ᴏᴡɴ ᴄʟᴏɴᴇ ʙᴏᴛ', callback_data='clone')])
@@ -184,7 +184,7 @@ async def start(client, message):
             redirect_target = actual_file_param if actual_file_param else clean_token
 
             redirect_btn = [[
-                InlineKeyboardButton("📌 GET FILE NOW 📌", url=f"https://t.me/{username}?start={redirect_target}")
+                InlineKeyboardButton("📌 GET FILE NOW 📌", url=f"https://t.me/{username}?start={redirect_target}", style=enums.ButtonStyle.PRIMARY)
             ]]
 
             await status_reply.edit_text(
@@ -226,11 +226,11 @@ async def start(client, message):
         return await message.reply_text(f"**Error - {e}**")
 
     processing_keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("👑 DEVELOPER", url="https://t.me/HDFILM0900_BOT")],
-        [InlineKeyboardButton("❌ CANCEL", callback_data=f"cancel_batch_{user_id}")]
+        [InlineKeyboardButton("👑 DEVELOPER", url="https://t.me/HDFILM0900_BOT", style=enums.ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton("❌ CANCEL", callback_data=f"cancel_batch_{user_id}", style=enums.ButtonStyle.DANGER)]
     ])
     CANCEL_PROCESSING[user_id] = False
-    sts = await message.reply(text="<b>🔺 𝙿𝙻𝙴𝙰𝚂𝙴 𝚆𝙰𝙸𝚃...</b>", reply_markup=processing_keyboard)
+    sts = await message.reply(text="<b>🔺 𝙿𝙻𝙴𝙰𝚂𝙴 𝚆𝙰𝙸𝚃</b>", reply_markup=processing_keyboard)
 
     try:
         decoded_bytes = base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))
@@ -450,8 +450,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
 
     elif query.data == "show_premium_qr":
         screenshot_keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("📤 Send Payment Screenshot", url=f"https://t.me/HDFILM0900_BOT")], 
-            [InlineKeyboardButton("❌ Close ❌", callback_data='close_data')]
+            [InlineKeyboardButton("📤 Send Payment Screenshot", url=f"https://t.me/HDFILM0900_BOT", style=enums.ButtonStyle.PRIMARY)], 
+            [InlineKeyboardButton("❌ Close ❌", callback_data='close_data', style=enums.ButtonStyle.DANGER)]
         ])
         await query.message.reply_photo(
             photo=QR_IMAGE_URL,
@@ -462,7 +462,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
 
     elif query.data == "show_premium_upi":
         screenshot_keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("📤 Send Payment Screenshot", url=f"https://t.me/HDFILM0900_BOT")],
+            [InlineKeyboardButton("📤 Send Payment Screenshot", url=f"https://t.me/HDFILM0900_BOT", style=enums.ButtonStyle.PRIMARY)],
             [InlineKeyboardButton("⬅️ Back", callback_data="buy_premium_panel")]
         ])
         try:
@@ -493,10 +493,10 @@ async def cb_handler(client: Client, query: CallbackQuery):
     
     elif query.data == "start":
         buttons = [
-            [InlineKeyboardButton('🔍 Support Group', url='https://t.me/pratilipifm0900'), InlineKeyboardButton('🤖 Story Channel', url='https://t.me/freestoryhubMR')],
-            [InlineKeyboardButton('💁‍♀️ Features', callback_data='help'), InlineKeyboardButton('😊 About', callback_data='about')],
-            [InlineKeyboardButton('⭐ Buy Premium ⭐', callback_data='buy_premium_panel')],
-            [InlineKeyboardButton('⁉️ Settings ⁉️', callback_data='open_admin_from_start')]
+            [InlineKeyboardButton('🔍 Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜᴘ', url='https://t.me/pratilipifm0900'), InlineKeyboardButton('🤖 Sᴛᴏʀʏ Cʜᴀɴɴᴇʟ', url='https://t.me/freestoryhubMR')],
+            [InlineKeyboardButton('💁‍♀️ Fᴇᴀᴛᴜʀᴇs', callback_data='help'), InlineKeyboardButton('😊 Aʙᴏᴜᴛ', callback_data='about')],
+            [InlineKeyboardButton('⭐ Buy Premium ⭐', callback_data='buy_premium_panel', style=enums.ButtonStyle.DANGER)],
+            [InlineKeyboardButton('⁉️ Sᴇᴛᴛɪɴɢs ⁉️', callback_data='open_admin_from_start', style=enums.ButtonStyle.PRIMARY)]
         ]
         if CLONE_MODE:
             buttons.append([InlineKeyboardButton('🤖 create your own clone bot', callback_data='clone')])      
