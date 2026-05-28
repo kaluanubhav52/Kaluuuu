@@ -68,6 +68,7 @@ async def start(client, message):
     username = client.me.username
     user_id = message.from_user.id
     
+    # Live data extraction from dbusers system
     settings = await db.get_settings()
     is_verify_mode = settings.get("verify_mode", True)
     is_protect = settings.get("protect_content", False)
@@ -75,17 +76,19 @@ async def start(client, message):
     del_time_seconds = settings.get("auto_delete_time", 1800)
     del_time_minutes = del_time_seconds // 60
     
-    is_premium = await db.check_premium_status(user_id) if hasattr(db, 'check_premium_status') else False
+    is_premium = await db.check_premium_status(user_id)
     
     start_photo = settings.get("start_photo", None)
     is_spoiler = settings.get("start_spoiler", False) 
     db_start_text = settings.get("custom_start_text", None)
     start_caption = db_start_text if db_start_text else script.START_TXT
 
+    # Auto Add New Users to Database
     if not await db.is_user_exist(user_id):
         await db.add_user(user_id, message.from_user.first_name)
         await client.send_message(LOG_CHANNEL, script.LOG_TEXT.format(user_id, message.from_user.mention))
     
+    # Render Main Menu Panel if no parameters passed
     if len(message.command) != 2:
         await client.send_chat_action(message.chat.id, enums.ChatAction.TYPING)
         await asyncio.sleep(1)
@@ -173,8 +176,7 @@ async def start(client, message):
 
     # --- FILE DELIVERY ENGINE ---
     try:
-        is_user_premium = await db.check_premium_status(user_id) if hasattr(db, 'check_premium_status') else False
-        if not is_user_premium and settings.get("premium_mode", False):
+        if not is_premium and settings.get("premium_mode", False):
             buy_btn = InlineKeyboardMarkup([[InlineKeyboardButton("👑 Buy Premium", callback_data='buy_premium_panel')]])
             await message.reply_text(
                 "👑 **यह फाइल प्रीमियम है!**\n\nइसे एक्सेस करने के लिए कृपया प्रीमियम लें।\n\n"
@@ -184,6 +186,9 @@ async def start(client, message):
             return 
         
         if not is_premium and is_verify_mode and not await check_verification(client, user_id):
+            # 👑 LIVE TOKEN TRACKING LOGGER INCREMENTATION
+            await db.increment_token_count()
+            
             btn = [[
                 InlineKeyboardButton("🌀 𝚅𝙴𝚁𝙸𝙵𝚈 🌀", url=await get_token(client, user_id, f"https://telegram.me/{username}?start=", data)),
                 InlineKeyboardButton("⁉️ 𝚃𝚄𝚃𝙾𝚁𝙸𝙰𝙻 ⁉️", url=VERIFY_TUTORIAL)
