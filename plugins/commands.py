@@ -124,7 +124,7 @@ async def start(client, message):
                 InlineKeyboardButton('💁‍♀️ Fᴇᴀᴛᴜʀᴇs', callback_data='help'),
                 InlineKeyboardButton('😊 Aʙᴏᴜᴛ', callback_data='about')
             ],
-            [InlineKeyboardButton('⭐ Buy Premium ⭐', callback_data='buy_premium_panel', style=enums.ButtonStyle.DANGER)],
+            [InlineKeyboardButton('⭐ ᗷᑌY ᑭᖇᗴᗰIᑌᗰ ⭐', callback_data='buy_premium_panel', style=enums.ButtonStyle.DANGER)],
             [InlineKeyboardButton('⁉️ Sᴇᴛᴛɪɴɢs ⁉️', callback_data='open_admin_from_start', style=enums.ButtonStyle.PRIMARY)]
         ]
         if CLONE_MODE:
@@ -495,7 +495,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         buttons = [
             [InlineKeyboardButton('🔍 Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜᴘ', url='https://t.me/pratilipifm0900'), InlineKeyboardButton('🤖 Sᴛᴏʀʏ Cʜᴀɴɴᴇʟ', url='https://t.me/freestoryhubMR')],
             [InlineKeyboardButton('💁‍♀️ Fᴇᴀᴛᴜʀᴇs', callback_data='help'), InlineKeyboardButton('😊 Aʙᴏᴜᴛ', callback_data='about')],
-            [InlineKeyboardButton('⭐ Buy Premium ⭐', callback_data='buy_premium_panel', style=enums.ButtonStyle.DANGER)],
+            [InlineKeyboardButton('⭐ ᗷᑌY ᑭᖇᗴᗰIᑌᗰ ⭐', callback_data='buy_premium_panel', style=enums.ButtonStyle.DANGER)],
             [InlineKeyboardButton('⁉️ Sᴇᴛᴛɪɴɢs ⁉️', callback_data='open_admin_from_start', style=enums.ButtonStyle.PRIMARY)]
         ]
         if CLONE_MODE:
