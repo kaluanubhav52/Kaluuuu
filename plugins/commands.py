@@ -77,6 +77,26 @@ def formate_file_name(file_name):
     file_name = '@HDFILM0900_BOT ' + ' '.join(filter(lambda x: not x.startswith('http') and not x.startswith('@') and not x.startswith('www.'), file_name.split()))
     return file_name
 
+
+# ⭐⭐⭐ NEW TEXT TRANSITION HELPER ⭐⭐⭐
+async def show_text_transition(query, reply_markup):
+    """Handles text transition based on message type (Photo or Plain Text) to avoid crashes."""
+    try:
+        is_media = bool(query.message.photo or query.message.video or query.message.animation)
+        
+        steps = ["● ◌ ◌", "● ● ◌", "● ● ●"]
+        
+        for step in steps:
+            if is_media:
+                await query.message.edit_caption(caption=step, reply_markup=reply_markup)
+            else:
+                await query.message.edit_text(text=step, reply_markup=reply_markup)
+            await asyncio.sleep(0.3) # 0.3 second ka delay har step ke beech
+            
+    except Exception as e:
+        logger.error(f"Text transition bypass: {e}")
+
+
 # --- BOT ROUTING ENGINE ---
 
 @Client.on_message(filters.command("start") & filters.incoming)
@@ -125,7 +145,7 @@ async def start(client, message):
                 InlineKeyboardButton('😊 Aʙᴏᴜᴛ', callback_data='about')
             ],
             [InlineKeyboardButton('⭐ ᗷᑌY ᑭᖇᗴᗰIᑌᗰ ⭐', callback_data='buy_premium_panel', style=enums.ButtonStyle.DANGER)],
-            [InlineKeyboardButton('⁉️ Sᴇᴛᴛɪɴɢs ⁉️', callback_data='open_admin_from_start', style=enums.ButtonStyle.PRIMARY)]
+            [InlineKeyboardButton('⁉️ SᴇᴛᴛɪɴGS ⁉️', callback_data='open_admin_from_start', style=enums.ButtonStyle.PRIMARY)]
         ]
         if CLONE_MODE:
             buttons.append([InlineKeyboardButton('🤖 ᴄʀᴇᴀᴛᴇ ʏᴏᴜʀ ᴏᴡɴ ᴄʟᴏɴᴇ ʙᴏᴛ', callback_data='clone')])
@@ -208,11 +228,10 @@ async def start(client, message):
             return 
         
         if not is_premium and is_verify_mode and not await check_verification(client, user_id):
-            # 👑 LIVE TOKEN TRACKING LOGGER INCREMENTATION
             await db.increment_token_count()
             
             btn = [[
-                InlineKeyboardButton("🌀 𝚅𝙴𝚁𝙸𝙵𝚈 🌀", url=await get_token(client, user_id, f"https://telegram.me/{username}?start=", data)),
+                InlineKeyboardButton("🌀 verify 🌀", url=await get_token(client, user_id, f"https://telegram.me/{username}?start=", data)),
                 InlineKeyboardButton("⁉️ 𝚃𝚄𝚃𝙾𝚁𝙸𝙰𝙻 ⁉️", url=VERIFY_TUTORIAL)
             ]]
             not_verified_msg = await message.reply_text(
@@ -347,7 +366,7 @@ async def start(client, message):
                     download = f"{URL}{str(log_msg.id)}/{quote_plus(get_name(log_msg))}?hash={get_hash(log_msg)}"
                     button = [
                         [InlineKeyboardButton("• ᴅᴏᴡɴʟᴏᴀᴅ •", url=download), InlineKeyboardButton('• ᴡᴀᴛᴄʜ •', url=stream)],
-                        [InlineKeyboardButton("• ᴡᴀᴛᴄʜ ɪɴ ᴡᴇʙ ᴀᴘᴘ •", web_app=WebAppInfo(url=stream))]
+                        [InlineKeyboardButton("• ᴡᴀᴛᴄ_ʜ ɪɴ ᴡᴇʙ ᴀᴘᴘ •", web_app=WebAppInfo(url=stream))]
                     ]
                     reply_markup = InlineKeyboardMarkup(button)
                 else: reply_markup = None
@@ -413,7 +432,7 @@ async def base_site_handler(client, m: Message):
         await update_user_info(user_id, {"base_site": base_site})
         await m.reply("<b>Base Site updated successfully</b>")
 
-# --- INTERACTIVE CALLBACKS ---
+# --- INTERACTIVE CALLBACKS (WITH TEXT-TYPE DOTS) ---
 
 @Client.on_callback_query()
 async def cb_handler(client: Client, query: CallbackQuery):
@@ -441,8 +460,14 @@ async def cb_handler(client: Client, query: CallbackQuery):
             [InlineKeyboardButton("⬅️ Back", callback_data="start")]
         ])
         
+        # 🌟 Click par text badlega: ● ◌ ◌ -> ● ● ◌ -> ● ● ●
+        await show_text_transition(query, premium_keyboard)
+
         try:
-            await query.message.edit_text(text=PREMIUM_PLANS_TEXT, reply_markup=premium_keyboard)
+            if start_photo:
+                await query.message.edit_caption(caption=PREMIUM_PLANS_TEXT, reply_markup=premium_keyboard)
+            else:
+                await query.message.edit_text(text=PREMIUM_PLANS_TEXT, reply_markup=premium_keyboard)
         except Exception:
             try: await query.message.delete()
             except Exception: pass
@@ -465,11 +490,15 @@ async def cb_handler(client: Client, query: CallbackQuery):
             [InlineKeyboardButton("📤 Send Payment Screenshot", url=f"https://t.me/HDFILM0900_BOT", style=enums.ButtonStyle.PRIMARY)],
             [InlineKeyboardButton("⬅️ Back", callback_data="buy_premium_panel")]
         ])
+        
+        # 🌟 Click par text badlega: ● ◌ ◌ -> ● ● ◌ -> ● ● ●
+        await show_text_transition(query, screenshot_keyboard)
+
         try:
-            await query.message.edit_text(
-                text=f"👉 <b>PAY AMOUNT ACCORDING TO YOUR PLAN</b>\n\n📌 <b>UPI ID:</b> <code>{UPI_ID}</code> (Tap to copy)\n\n‼️ <b>MUST SEND SCREENSHOT AFTER PAYMENT</b>\nपेमेंट होने के बाद हमें स्क्रीनशॉट भेजें।",
-                reply_markup=screenshot_keyboard
-            )
+            if start_photo:
+                await query.message.edit_caption(caption=f"👉 <b>PAY AMOUNT ACCORDING TO YOUR PLAN</b>\n\n📌 <b>UPI ID:</b> <code>{UPI_ID}</code>\n\n‼️ <b>MUST SEND SCREENSHOT AFTER PAYMENT</b>", reply_markup=screenshot_keyboard)
+            else:
+                await query.message.edit_text(text=f"👉 <b>PAY AMOUNT ACCORDING TO YOUR PLAN</b>\n\n📌 <b>UPI ID:</b> <code>{UPI_ID}</code>\n\n‼️ <b>MUST SEND SCREENSHOT AFTER PAYMENT</b>", reply_markup=screenshot_keyboard)
         except Exception:
             try: await query.message.delete()
             except Exception: pass
@@ -481,8 +510,14 @@ async def cb_handler(client: Client, query: CallbackQuery):
         me2 = (await client.get_me()).mention
         text_content = script.ABOUT_TXT.format(me2)
         
+        # 🌟 Click par text badlega: ● ◌ ◌ -> ● ● ◌ -> ● ● ●
+        await show_text_transition(query, reply_markup)
+
         try:
-            await query.message.edit_text(text=text_content, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
+            if start_photo:
+                await query.message.edit_caption(caption=text_content, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
+            else:
+                await query.message.edit_text(text=text_content, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
         except Exception:
             try: await query.message.delete()
             except Exception: pass
@@ -496,7 +531,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             [InlineKeyboardButton('🔍 Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜᴘ', url='https://t.me/pratilipifm0900'), InlineKeyboardButton('🤖 Sᴛᴏʀʏ Cʜᴀɴɴᴇʟ', url='https://t.me/freestoryhubMR')],
             [InlineKeyboardButton('💁‍♀️ Fᴇᴀᴛᴜʀᴇs', callback_data='help'), InlineKeyboardButton('😊 Aʙᴏᴜᴛ', callback_data='about')],
             [InlineKeyboardButton('⭐ ᗷᑌY ᑭᖇᗴᗰIᑌᗰ ⭐', callback_data='buy_premium_panel', style=enums.ButtonStyle.DANGER)],
-            [InlineKeyboardButton('⁉️ Sᴇᴛᴛɪɴɢs ⁉️', callback_data='open_admin_from_start', style=enums.ButtonStyle.PRIMARY)]
+            [InlineKeyboardButton('⁉️ SᴇᴛᴛɪɴGS ⁉️', callback_data='open_admin_from_start', style=enums.ButtonStyle.PRIMARY)]
         ]
         if CLONE_MODE:
             buttons.append([InlineKeyboardButton('🤖 create your own clone bot', callback_data='clone')])      
@@ -504,8 +539,14 @@ async def cb_handler(client: Client, query: CallbackQuery):
         me2 = (await client.get_me()).mention
         text_content = start_caption.format(query.from_user.mention, me2)
         
+        # 🌟 Click par text badlega: ● ◌ ◌ -> ● ● ◌ -> ● ● ●
+        await show_text_transition(query, reply_markup)
+
         try:
-            await query.message.edit_text(text=text_content, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
+            if start_photo:
+                await query.message.edit_caption(caption=text_content, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
+            else:
+                await query.message.edit_text(text=text_content, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
         except Exception:
             try: await query.message.delete()
             except Exception: pass
@@ -519,8 +560,14 @@ async def cb_handler(client: Client, query: CallbackQuery):
         reply_markup = InlineKeyboardMarkup(buttons)
         text_content = script.CLONE_TXT.format(query.from_user.mention)
         
+        # 🌟 Click par text badlega: ● ◌ ◌ -> ● ● ◌ -> ● ● ●
+        await show_text_transition(query, reply_markup)
+
         try:
-            await query.message.edit_text(text=text_content, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
+            if start_photo:
+                await query.message.edit_caption(caption=text_content, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
+            else:
+                await query.message.edit_text(text=text_content, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
         except Exception:
             try: await query.message.delete()
             except Exception: pass
@@ -534,8 +581,14 @@ async def cb_handler(client: Client, query: CallbackQuery):
         reply_markup = InlineKeyboardMarkup(buttons)
         text_content = script.HELP_TXT
         
+        # 🌟 Click par text badlega: ● ◌ ◌ -> ● ● ◌ -> ● ● ●
+        await show_text_transition(query, reply_markup)
+
         try:
-            await query.message.edit_text(text=text_content, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
+            if start_photo:
+                await query.message.edit_caption(caption=text_content, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
+            else:
+                await query.message.edit_text(text=text_content, reply_markup=reply_markup, parse_mode=enums.ParseMode.HTML)
         except Exception:
             try: await query.message.delete()
             except Exception: pass
