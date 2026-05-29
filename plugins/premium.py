@@ -1,6 +1,6 @@
 import math
 from datetime import datetime, timedelta
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from plugins.dbusers import db  # Aapka updated database instance
 from config import *
@@ -21,8 +21,8 @@ async def plan_command_handler(client: Client, message: Message):
     """User ke liye subscription plans display karne ke liye command."""
     premium_keyboard = InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("📊 Qʀ Code", callback_data="show_premium_qr"),
-            InlineKeyboardButton("💳 Uᴘɪ ID", callback_data="show_premium_upi")
+            InlineKeyboardButton("📊 Qʀ Code", callback_data="show_premium_qr", style=enums.ButtonStyle.PRIMARY),
+            InlineKeyboardButton("💳 Uᴘɪ ID", callback_data="show_premium_upi", style=enums.ButtonStyle.SUCCESS)
         ],
         [InlineKeyboardButton("❌ Cʟᴏsᴇ", callback_data="close_data")]
     ])
@@ -99,7 +99,11 @@ async def my_plan_handler(client: Client, message: Message):
             "━━━━━━━━━━━━━━━━━━━━\n"
             "🚀 No ads, no limits! Direct high-speed files active."
         )
-        await message.reply_text(text=success_text)
+
+        buy_keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("❌ Close", callback_data="close_data", style=enums.ButtonStyle.DANGER)]
+        ])
+        await message.reply_text(text=success_text, reply_markup=buy_keyboard)
         
     else:
         # Non-premium / Free User Setup (With Empty Status Bar)
@@ -119,7 +123,7 @@ async def my_plan_handler(client: Client, message: Message):
         )
         
         buy_keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("⭐ Buy Premium ⭐", callback_data="buy_premium_panel")],
-            [InlineKeyboardButton("❌ Close", callback_data="close_data")]
+            [InlineKeyboardButton("⭐ Buy Premium ⭐", callback_data="buy_premium_panel", style=enums.ButtonStyle.PRIMARY)],
+            [InlineKeyboardButton("❌ Close", callback_data="close_data", style=enums.ButtonStyle.DANGER)]
         ])
         await message.reply_text(text=free_text, reply_markup=buy_keyboard)
