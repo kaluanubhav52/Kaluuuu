@@ -24,7 +24,7 @@ async def plan_command_handler(client: Client, message: Message):
             InlineKeyboardButton("📊 Qʀ Code", callback_data="show_premium_qr", style=enums.ButtonStyle.PRIMARY),
             InlineKeyboardButton("💳 Uᴘɪ ID", callback_data="show_premium_upi", style=enums.ButtonStyle.SUCCESS)
         ],
-        [InlineKeyboardButton("❌ Cʟᴏsᴇ", callback_data="close_data")]
+        [InlineKeyboardButton("❌ Cʟᴏsᴇ", callback_data="close_data", style=enums.ButtonStyle.DANGER)]
     ])
     await message.reply_text(text=PREMIUM_PLANS_TEXT, reply_markup=premium_keyboard)
 
