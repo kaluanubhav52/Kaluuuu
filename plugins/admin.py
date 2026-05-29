@@ -1,7 +1,7 @@
 import asyncio
 import re
 import logging
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from config import ADMINS
 from plugins.dbusers import db  # Explicit import to avoid namespace issues
@@ -41,12 +41,12 @@ async def get_main_panel_layout(settings):
         "ᴄᴜsᴛᴏᴍɪᴢᴇ ʏᴏᴜʀ sᴇᴛᴛɪɴɢs ᴀs ᴘᴇʀ ʏᴏᴜʀ ɴᴇᴇᴅ.\n"
     )
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔐 ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴍᴇɴᴜ", callback_data="adm_sub_verify")],
-        [InlineKeyboardButton("⏱️ ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ ᴍᴇɴᴜ", callback_data="adm_sub_delete")],
-        [InlineKeyboardButton("🎨 sᴛᴀʀᴛ ᴍᴇɴᴜ", callback_data="adm_sub_start_page")],
-        [InlineKeyboardButton("👑 ᴘʀᴇᴍɪᴜᴍ ᴍᴇɴᴜ", callback_data="adm_sub_premium")],
-        [InlineKeyboardButton(f"🛡️ ᴘʀᴏᴛᴇᴄᴛ ᴄᴏɴᴛᴇɴᴛ: {p_status}", callback_data="adm_toggle_protect")],
-        [InlineKeyboardButton("ʜᴏᴍᴇ", callback_data='start')]
+        [InlineKeyboardButton("🔐 ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴍᴇɴᴜ", callback_data="adm_sub_verify", style=enums.ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton("⏱️ ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ ᴍᴇɴᴜ", callback_data="adm_sub_delete", style=enums.ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton("🎨 sᴛᴀʀᴛ ᴍᴇɴᴜ", callback_data="adm_sub_start_page", style=enums.ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton("👑 ᴘʀᴇᴍɪᴜᴍ ᴍᴇɴᴜ", callback_data="adm_sub_premium", style=enums.ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton(f"🛡️ ᴘʀᴏᴛᴇᴄᴛ ᴄᴏɴᴛᴇɴᴛ: {p_status}", callback_data="adm_toggle_protect", style=enums.ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton("ʜᴏᴍᴇ", callback_data='start', style=enums.ButtonStyle.DANGER)]
     ])
     return text, keyboard
 
@@ -82,9 +82,9 @@ async def get_verify_menu_layout(settings):
         f"📈 **ᴘʀᴏɢʀᴇss:** `[{bar}] {percentage}%`"
     )
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴍᴏᴅᴇ: {v_status}", callback_data="adm_toggle_verify")],
-        [InlineKeyboardButton(f"ᴘʀᴇᴍɪᴜᴍ ᴍᴏᴅᴇ: {prem_mode_status}", callback_data="adm_toggle_premium_mode")],
-        [InlineKeyboardButton("sᴇᴛ ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴛɪᴍᴇ 🔑", callback_data="adm_set_token_time")],
+        [InlineKeyboardButton(f"ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴍᴏᴅᴇ: {v_status}", callback_data="adm_toggle_verify",style=enums.ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton(f"ᴘʀᴇᴍɪᴜᴍ ᴍᴏᴅᴇ: {prem_mode_status}", callback_data="adm_toggle_premium_mode", style=enums.ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton("sᴇᴛ ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴛɪᴍᴇ 🔑", callback_data="adm_set_token_time", style=enums.ButtonStyle.PRIMARY)],
         [InlineKeyboardButton("sᴇᴛ sʜᴏʀᴛᴇɴᴇʀ ᴀᴘɪ ɪᴅ 🔗", callback_data="adm_change_link")],
         [InlineKeyboardButton("🔄 ʀᴇғʀᴇsʜ sᴛᴀᴛs", callback_data="adm_sub_verify")],  # Loop response refresh key
         [InlineKeyboardButton("ʙᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="adm_back_main")]
@@ -100,7 +100,7 @@ async def get_delete_menu_layout(settings):
         f"⏱️ **ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇ:** `{del_time} Mɪɴᴜᴛᴇs`"
     )
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ ᴍᴏᴅᴇ: {d_status}", callback_data="adm_toggle_delete")],
+        [InlineKeyboardButton(f"ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ ᴍᴏᴅᴇ: {d_status}", callback_data="adm_toggle_delete", style=enums.ButtonStyle.PRIMARY)],
         [InlineKeyboardButton("sᴇᴛ ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇ ⏱️", callback_data="adm_set_time")],
         [InlineKeyboardButton("ʙᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="adm_back_main")]
     ])
@@ -161,7 +161,7 @@ async def open_admin_from_start(client, query):
         return
     settings = await db.get_settings()
     text, keyboard = await get_main_panel_layout(settings)
-    keyboard.inline_keyboard[-1] = [InlineKeyboardButton("ʙᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="start")]
+    keyboard.inline_keyboard[-1] = [InlineKeyboardButton("ʜᴏᴍᴇ", callback_data="start", style=enums.ButtonStyle.DANGER)]
     try:
         await query.message.edit_text(text, reply_markup=keyboard)
     except Exception:
