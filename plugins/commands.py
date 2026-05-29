@@ -78,20 +78,23 @@ def formate_file_name(file_name):
     return file_name
 
 
-# ⭐⭐⭐ NEW TEXT TRANSITION HELPER ⭐⭐⭐
-async def show_text_transition(query, reply_markup):
-    """Handles text transition based on message type (Photo or Plain Text) to avoid crashes."""
+# ⭐⭐⭐ SECURED TEXT TRANSITION HELPER (Locks Buttons to Prevent Multiple Clicks) ⭐⭐⭐
+async def show_text_transition(query):
+    """Temporarily removes/locks buttons during text loading to prevent user double-clicks."""
     try:
         is_media = bool(query.message.photo or query.message.video or query.message.animation)
+        
+        # Loading ke waqt buttons ko "Please Wait" se lock kar dete hain taaki user click na kar paye
+        lock_markup = InlineKeyboardMarkup([[InlineKeyboardButton("⏳ 𝙿𝙻𝙴𝙰𝚂𝙴 𝚆𝙰𝙸𝚃...", callback_data="dummy_lock")]])
         
         steps = ["● ◌ ◌", "● ● ◌", "● ● ●"]
         
         for step in steps:
             if is_media:
-                await query.message.edit_caption(caption=step, reply_markup=reply_markup)
+                await query.message.edit_caption(caption=step, reply_markup=lock_markup)
             else:
-                await query.message.edit_text(text=step, reply_markup=reply_markup)
-            await asyncio.sleep(0.3) # 0.3 second ka delay har step ke beech
+                await query.message.edit_text(text=step, reply_markup=lock_markup)
+            await asyncio.sleep(0.3) # Delay space
             
     except Exception as e:
         logger.error(f"Text transition bypass: {e}")
@@ -231,7 +234,7 @@ async def start(client, message):
             await db.increment_token_count()
             
             btn = [[
-                InlineKeyboardButton("🌀 verify 🌀", url=await get_token(client, user_id, f"https://telegram.me/{username}?start=", data)),
+                InlineKeyboardButton("🌀 信号 🌀", url=await get_token(client, user_id, f"https://telegram.me/{username}?start=", data)),
                 InlineKeyboardButton("⁉️ 𝚃𝚄𝚃𝙾𝚁𝙸𝙰𝙻 ⁉️", url=VERIFY_TUTORIAL)
             ]]
             not_verified_msg = await message.reply_text(
@@ -432,7 +435,7 @@ async def base_site_handler(client, m: Message):
         await update_user_info(user_id, {"base_site": base_site})
         await m.reply("<b>Base Site updated successfully</b>")
 
-# --- INTERACTIVE CALLBACKS (WITH TEXT-TYPE DOTS) ---
+# --- INTERACTIVE CALLBACKS (SECURED AGAINST SPAM/DOUBLE-CLICKS) ---
 
 @Client.on_callback_query()
 async def cb_handler(client: Client, query: CallbackQuery):
@@ -441,6 +444,11 @@ async def cb_handler(client: Client, query: CallbackQuery):
     is_spoiler = settings.get("start_spoiler", False)
     db_start_text = settings.get("custom_start_text", None)
     start_caption = db_start_text if db_start_text else script.START_TXT
+
+    # Dummy handler for locked button click
+    if query.data == "dummy_lock":
+        await query.answer("Please wait, loading current step... ⏳", show_alert=False)
+        return
 
     if query.data.startswith("cancel_batch_"):
         target_uid = int(query.data.split("_")[2])
@@ -460,8 +468,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
             [InlineKeyboardButton("⬅️ Back", callback_data="start")]
         ])
         
-        # 🌟 Click par text badlega: ● ◌ ◌ -> ● ● ◌ -> ● ● ●
-        await show_text_transition(query, premium_keyboard)
+        # 🔒 Lock Buttons & Show Transition Text First
+        await show_text_transition(query)
 
         try:
             if start_photo:
@@ -491,8 +499,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
             [InlineKeyboardButton("⬅️ Back", callback_data="buy_premium_panel")]
         ])
         
-        # 🌟 Click par text badlega: ● ◌ ◌ -> ● ● ◌ -> ● ● ●
-        await show_text_transition(query, screenshot_keyboard)
+        # 🔒 Lock Buttons & Show Transition Text First
+        await show_text_transition(query)
 
         try:
             if start_photo:
@@ -510,8 +518,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
         me2 = (await client.get_me()).mention
         text_content = script.ABOUT_TXT.format(me2)
         
-        # 🌟 Click par text badlega: ● ◌ ◌ -> ● ● ◌ -> ● ● ●
-        await show_text_transition(query, reply_markup)
+        # 🔒 Lock Buttons & Show Transition Text First
+        await show_text_transition(query)
 
         try:
             if start_photo:
@@ -528,7 +536,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
     
     elif query.data == "start":
         buttons = [
-            [InlineKeyboardButton('🔍 Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜᴘ', url='https://t.me/pratilipifm0900'), InlineKeyboardButton('🤖 Sᴛᴏʀʏ Cʜᴀɴɴᴇʟ', url='https://t.me/freestoryhubMR')],
+            [InlineKeyboardButton('🔍 Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜヌ', url='https://t.me/pratilipifm0900'), InlineKeyboardButton('🤖 Sᴛᴏʀʏ Cʜᴀɴɴᴇʟ', url='https://t.me/freestoryhubMR')],
             [InlineKeyboardButton('💁‍♀️ Fᴇᴀᴛᴜʀᴇs', callback_data='help'), InlineKeyboardButton('😊 Aʙᴏᴜᴛ', callback_data='about')],
             [InlineKeyboardButton('⭐ ᗷᑌY ᑭᖇᗴᗰIᑌᗰ ⭐', callback_data='buy_premium_panel', style=enums.ButtonStyle.DANGER)],
             [InlineKeyboardButton('⁉️ SᴇᴛᴛɪɴGS ⁉️', callback_data='open_admin_from_start', style=enums.ButtonStyle.PRIMARY)]
@@ -539,8 +547,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
         me2 = (await client.get_me()).mention
         text_content = start_caption.format(query.from_user.mention, me2)
         
-        # 🌟 Click par text badlega: ● ◌ ◌ -> ● ● ◌ -> ● ● ●
-        await show_text_transition(query, reply_markup)
+        # 🔒 Lock Buttons & Show Transition Text First
+        await show_text_transition(query)
 
         try:
             if start_photo:
@@ -560,8 +568,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
         reply_markup = InlineKeyboardMarkup(buttons)
         text_content = script.CLONE_TXT.format(query.from_user.mention)
         
-        # 🌟 Click par text badlega: ● ◌ ◌ -> ● ● ◌ -> ● ● ●
-        await show_text_transition(query, reply_markup)
+        # 🔒 Lock Buttons & Show Transition Text First
+        await show_text_transition(query)
 
         try:
             if start_photo:
@@ -581,8 +589,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
         reply_markup = InlineKeyboardMarkup(buttons)
         text_content = script.HELP_TXT
         
-        # 🌟 Click par text badlega: ● ◌ ◌ -> ● ● ◌ -> ● ● ●
-        await show_text_transition(query, reply_markup)
+        # 🔒 Lock Buttons & Show Transition Text First
+        await show_text_transition(query)
 
         try:
             if start_photo:
