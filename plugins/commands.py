@@ -464,8 +464,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
         
     elif query.data == "buy_premium_panel":
         premium_keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("📊 QR Code", callback_data="show_premium_qr"), InlineKeyboardButton("💳 UPI ID", callback_data="show_premium_upi")],
-            [InlineKeyboardButton("⬅️ Back", callback_data="start")]
+            [InlineKeyboardButton("📊 QR Code", callback_data="show_premium_qr", style=enums.ButtonStyle.PRIMARY), InlineKeyboardButton("💳 UPI ID", callback_data="show_premium_upi", style=enums.ButtonStyle.SUCCESS)],
+            [InlineKeyboardButton("⬅️ Back", callback_data="start", style=enums.ButtonStyle.PRIMARY)]
         ])
         
         # 🔒 Lock Buttons & Show Transition Text First
