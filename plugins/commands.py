@@ -85,7 +85,7 @@ async def show_text_transition(query):
         is_media = bool(query.message.photo or query.message.video or query.message.animation)
         
         # Loading ke waqt buttons ko "Please Wait" se lock kar dete hain taaki user click na kar paye
-        lock_markup = InlineKeyboardMarkup([[InlineKeyboardButton("👑 𝙳𝙴𝚅𝙴𝙻𝙾𝙿𝙴𝚁", url="https://t.me/HDFILM0900_BOT")]])
+        lock_markup = InlineKeyboardMarkup([[InlineKeyboardButton("👑 𝙳𝙴𝚅𝙴𝙻𝙾𝙿𝙴𝚁", url="https://t.me/HDFILM0900_BOT", style=enums.ButtonStyle.PRIMARY)]])
         
         steps = ["● ◌ ◌", "● ● ◌", "● ● ●"]
         
@@ -234,8 +234,8 @@ async def start(client, message):
             await db.increment_token_count()
             
             btn = [[
-                InlineKeyboardButton("🌀 VERIFY 🌀", url=await get_token(client, user_id, f"https://telegram.me/{username}?start=", data)),
-                InlineKeyboardButton("⁉️ TUTORIAL ⁉️", url=VERIFY_TUTORIAL)
+                InlineKeyboardButton("🌀 VERIFY 🌀", url=await get_token(client, user_id, f"https://telegram.me/{username}?start=", data), style=enums.ButtonStyle.PRIMARY),
+                InlineKeyboardButton("⁉️ TUTORIAL ⁉️", url=VERIFY_TUTORIAL, style=enums.ButtonStyle.DANGER)
             ]]
             not_verified_msg = await message.reply_text(
                 text=script.NOT_VERIFIED_TXT.format(message.from_user.mention),
@@ -513,7 +513,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             await client.send_message(query.message.chat.id, text=f"👉 <b>PAY AMOUNT ACCORDING TO YOUR PLAN</b>\n\n📌 <b>UPI ID:</b> <code>{UPI_ID}</code>\n\n‼️ <b>MUST SEND SCREENSHOT AFTER PAYMENT</b>", reply_markup=screenshot_keyboard)
 
     elif query.data == "about":
-        buttons = [[InlineKeyboardButton('Home', callback_data='start'), InlineKeyboardButton('🔒 Close', callback_data='close_data')]]
+        buttons = [[InlineKeyboardButton('Home', callback_data='start', style=enums.ButtonStyle.PRIMARY), InlineKeyboardButton('🔒 Close', callback_data='close_data', style=enums.ButtonStyle.DANGER)]]
         reply_markup = InlineKeyboardMarkup(buttons)
         me2 = (await client.get_me()).mention
         text_content = script.ABOUT_TXT.format(me2)
