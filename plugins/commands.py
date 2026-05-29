@@ -85,7 +85,7 @@ async def show_text_transition(query):
         is_media = bool(query.message.photo or query.message.video or query.message.animation)
         
         # Loading ke waqt buttons ko "Please Wait" se lock kar dete hain taaki user click na kar paye
-        lock_markup = InlineKeyboardMarkup([[InlineKeyboardButton("⏳ 𝙿𝙻𝙴𝙰𝚂𝙴 𝚆𝙰𝙸𝚃...", callback_data="dummy_lock")]])
+        lock_markup = InlineKeyboardMarkup([[InlineKeyboardButton("👑 𝙳𝙴𝚅𝙴𝙻𝙾𝙿𝙴𝚁", url="https://t.me/HDFILM0900_BOT")]])
         
         steps = ["● ◌ ◌", "● ● ◌", "● ● ●"]
         
@@ -222,7 +222,7 @@ async def start(client, message):
     # --- FILE DELIVERY ENGINE ---
     try:
         if not is_premium and settings.get("premium_mode", False):
-            buy_btn = InlineKeyboardMarkup([[InlineKeyboardButton("👑 Buy Premium", callback_data='buy_premium_panel')]])
+            buy_btn = InlineKeyboardMarkup([[InlineKeyboardButton("👑 ᗷᑌY ᑭᖇᗴᗰIᑌᗰ", callback_data='buy_premium_panel')]])
             await message.reply_text(
                 "👑 **यह फाइल प्रीमियम है!**\n\nइसे एक्सेस करने के लिए कृपया प्रीमियम लें।\n\n"
                 "🔎 ᴄʟɪᴄᴋ ᴏɴ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", 
@@ -234,8 +234,8 @@ async def start(client, message):
             await db.increment_token_count()
             
             btn = [[
-                InlineKeyboardButton("🌀 信号 🌀", url=await get_token(client, user_id, f"https://telegram.me/{username}?start=", data)),
-                InlineKeyboardButton("⁉️ 𝚃𝚄𝚃𝙾𝚁𝙸𝙰𝙻 ⁉️", url=VERIFY_TUTORIAL)
+                InlineKeyboardButton("🌀 VERIFY 🌀", url=await get_token(client, user_id, f"https://telegram.me/{username}?start=", data)),
+                InlineKeyboardButton("⁉️ TUTORIAL ⁉️", url=VERIFY_TUTORIAL)
             ]]
             not_verified_msg = await message.reply_text(
                 text=script.NOT_VERIFIED_TXT.format(message.from_user.mention),
