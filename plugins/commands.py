@@ -496,7 +496,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
     elif query.data == "show_premium_upi":
         screenshot_keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("📤 Send Payment Screenshot", url=f"https://t.me/HDFILM0900_BOT", style=enums.ButtonStyle.PRIMARY)],
-            [InlineKeyboardButton("⬅️ Back", callback_data="buy_premium_panel")]
+            [InlineKeyboardButton("⬅️ Back", callback_data="buy_premium_panel", style=enums.ButtonStyle.SUCCESS)]
         ])
         
         # 🔒 Lock Buttons & Show Transition Text First
@@ -536,7 +536,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
     
     elif query.data == "start":
         buttons = [
-            [InlineKeyboardButton('🔍 Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜヌ', url='https://t.me/pratilipifm0900'), InlineKeyboardButton('🤖 Sᴛᴏʀʏ Cʜᴀɴɴᴇʟ', url='https://t.me/freestoryhubMR')],
+            [InlineKeyboardButton('🔍 Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜᴘ', url='https://t.me/pratilipifm0900'), InlineKeyboardButton('🤖 Sᴛᴏʀʏ Cʜᴀɴɴᴇʟ', url='https://t.me/freestoryhubMR')],
             [InlineKeyboardButton('💁‍♀️ Fᴇᴀᴛᴜʀᴇs', callback_data='help'), InlineKeyboardButton('😊 Aʙᴏᴜᴛ', callback_data='about')],
             [InlineKeyboardButton('⭐ ᗷᑌY ᑭᖇᗴᗰIᑌᗰ ⭐', callback_data='buy_premium_panel', style=enums.ButtonStyle.DANGER)],
             [InlineKeyboardButton('⁉️ SᴇᴛᴛɪɴGS ⁉️', callback_data='open_admin_from_start', style=enums.ButtonStyle.PRIMARY)]
@@ -564,7 +564,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 await client.send_message(query.message.chat.id, text=text_content, reply_markup=reply_markup)
     
     elif query.data == "clone":
-        buttons = [[InlineKeyboardButton('Home', callback_data='start'), InlineKeyboardButton('🔒 Close', callback_data='close_data')]]
+        buttons = [[InlineKeyboardButton('Home', callback_data='start', style=enums.ButtonStyle.PRIMARY), InlineKeyboardButton('🔒 Close', callback_data='close_data', style=enums.ButtonStyle.DANGER)]]
         reply_markup = InlineKeyboardMarkup(buttons)
         text_content = script.CLONE_TXT.format(query.from_user.mention)
         
@@ -585,7 +585,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 await client.send_message(query.message.chat.id, text=text_content, reply_markup=reply_markup)
     
     elif query.data == "help":
-        buttons = [[InlineKeyboardButton('Home', callback_data='start'), InlineKeyboardButton('🔒 Close', callback_data='close_data')]]
+        buttons = [[InlineKeyboardButton('Home', callback_data='start', style=enums.ButtonStyle.PRIMARY), InlineKeyboardButton('🔒 Close', callback_data='close_data', style=enums.ButtonStyle.DANGER)]]
         reply_markup = InlineKeyboardMarkup(buttons)
         text_content = script.HELP_TXT
         
