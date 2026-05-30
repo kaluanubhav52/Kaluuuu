@@ -45,7 +45,7 @@ class Database:
         user = await self.col.find_one({'id': int(user_id)})
         return user.get('verify_time', 0) if user else 0
 
-        # =============================================================
+    # =============================================================
     # 🔑 LIVE TOKEN TRACKER SYSTEM
     # =============================================================
 
@@ -141,6 +141,8 @@ class Database:
                 "_id": "bot_config",
                 "verify_mode": True,
                 "premium_mode": False,
+                "fsub_mode": False,             # 🔥 NEW: Default FSUB Status (OFF)
+                "fsub_channels": [],            # 🔥 NEW: Empty list for 5 channels max
                 "auto_delete_mode": True,
                 "auto_delete_time": 1800,
                 "protect_content": False,
@@ -152,6 +154,15 @@ class Database:
             }
             await self.settings.insert_one(default)
             return default
+            
+        # Agar purana document bana hua hai lekin usme fsub_channels field nahi hai, toh initialize karein
+        if "fsub_mode" not in settings or "fsub_channels" not in settings:
+            await self.settings.update_one(
+                {"_id": "bot_config"},
+                {"$set": {"fsub_mode": settings.get("fsub_mode", False), "fsub_channels": settings.get("fsub_channels", [])}}
+            )
+            settings = await self.settings.find_one({"_id": "bot_config"})
+            
         return settings
 
     async def update_setting(self, key, value):
