@@ -45,7 +45,7 @@ LOG_CHANNEL = int(environ.get("LOG_CHANNEL", "-1003889400872"))
 DB_CHANNEL = int(environ.get("DB_CHANNEL", "-1003616654675"))
 
 #force subscription 
-AUTH_CHANNEL = [int(ch) if id_pattern.search(ch) else ch for ch in environ.get('AUTH_CHANNEL', '-1003743352052').split()
+AUTH_CHANNEL = [int(ch) if id_pattern.search(ch) else ch for ch in environ.get('AUTH_CHANNEL', '-1003743352052').split()]
                 
 # File Caption Information
 CUSTOM_FILE_CAPTION = environ.get("CUSTOM_FILE_CAPTION", f"{script.CAPTION}")
