@@ -45,7 +45,7 @@ class Database:
         user = await self.col.find_one({'id': int(user_id)})
         return user.get('verify_time', 0) if user else 0
 
-    # =============================================================
+        # =============================================================
     # 🔑 LIVE TOKEN TRACKER SYSTEM
     # =============================================================
 
@@ -133,20 +133,14 @@ class Database:
 
     # =============================================================
 
-    # 🔥 UPDATED: Advanced Dual-Mode Setup Configuration mapping inside Settings
+    # Dynamic Admin Panel Settings (Get and Update)
     async def get_settings(self):
         settings = await self.settings.find_one({"_id": "bot_config"})
-        
-        # Default structured mapping schema for exact 5 multi-mode slots
-        default_fsub_slots = [{"chat_id": None, "type": "normal"} for _ in range(5)]
-        
         if not settings:
             default = {
                 "_id": "bot_config",
                 "verify_mode": True,
                 "premium_mode": False,
-                "fsub_mode": False,             
-                "fsub_channels": default_fsub_slots,  # 🔥 NEW SCHEMA: Array of dictionaries
                 "auto_delete_mode": True,
                 "auto_delete_time": 1800,
                 "protect_content": False,
@@ -158,40 +152,6 @@ class Database:
             }
             await self.settings.insert_one(default)
             return default
-            
-        # 🛠️ Migration Handler: Agar purani collection bani hui h, toh use data object array me normalize karein
-        updated_fields = {}
-        if "fsub_mode" not in settings:
-            updated_fields["fsub_mode"] = False
-            
-        if "fsub_channels" not in settings:
-            updated_fields["fsub_channels"] = default_fsub_slots
-        else:
-            # Agar channels list h par components dictionaries nahi hain, toh data migrate karein
-            raw_channels = settings.get("fsub_channels", [])
-            is_old_format = any(not isinstance(ch, dict) for ch in raw_channels) if raw_channels else True
-            
-            if is_old_format:
-                migrated_channels = []
-                for ch in raw_channels:
-                    if isinstance(ch, dict):
-                        migrated_channels.append(ch)
-                    else:
-                        # Extract exact channel logic format Safely
-                        migrated_channels.append({"chat_id": ch, "type": "normal"})
-                        
-                while len(migrated_channels) < 5:
-                    migrated_channels.append({"chat_id": None, "type": "normal"})
-                    
-                updated_fields["fsub_channels"] = migrated_channels
-
-        if updated_fields:
-            await self.settings.update_one(
-                {"_id": "bot_config"},
-                {"$set": updated_fields}
-            )
-            settings = await self.settings.find_one({"_id": "bot_config"})
-            
         return settings
 
     async def update_setting(self, key, value):

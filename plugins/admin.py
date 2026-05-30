@@ -42,7 +42,6 @@ async def get_main_panel_layout(settings):
     )
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🔐 ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴍᴇɴᴜ", callback_data="adm_sub_verify", style=enums.ButtonStyle.PRIMARY)],
-        [InlineKeyboardButton("📢 ғᴏʀᴄᴇ sᴜʙ ᴍᴇɴᴜ", callback_data="adm_sub_fsub", style=enums.ButtonStyle.PRIMARY)],  
         [InlineKeyboardButton("⏱️ ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ ᴍᴇɴᴜ", callback_data="adm_sub_delete", style=enums.ButtonStyle.PRIMARY)],
         [InlineKeyboardButton("🎨 sᴛᴀʀᴛ ᴍᴇɴᴜ", callback_data="adm_sub_start_page", style=enums.ButtonStyle.PRIMARY)],
         [InlineKeyboardButton("👑 ᴘʀᴇᴍɪᴜᴍ ᴍᴇɴᴜ", callback_data="adm_sub_premium", style=enums.ButtonStyle.PRIMARY)],
@@ -51,67 +50,22 @@ async def get_main_panel_layout(settings):
     ])
     return text, keyboard
 
-# 🔥 UPDATED: Dynamic Force Subscribe Menu Layout (Per-Channel Mode)
-async def get_fsub_menu_layout(settings):
-    f_status = "🟢 ᴏɴ" if settings.get("fsub_mode", False) else "🔴 ᴏғғ"
-    raw_channels = settings.get("fsub_channels", [])
-    
-    # Schema parser to fill exactly 5 slots safely
-    channels = []
-    for i in range(5):
-        if i < len(raw_channels):
-            ch = raw_channels[i]
-            if isinstance(ch, dict):
-                channels.append({"chat_id": ch.get("chat_id"), "type": ch.get("type", "normal")})
-            else:
-                channels.append({"chat_id": ch, "type": "normal"}) # Fallback configuration
-        else:
-            channels.append({"chat_id": None, "type": "normal"})
-        
-    text = (
-        "📢 **ғᴏʀᴄᴇ sᴜʙsᴄʀɪʙᴇ ᴄᴏɴғɪɢᴜʀᴀᴛɪᴏɴ**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"⚙️ **</span>ғsᴜʙ sᴛᴀᴛᴜs:** `{f_status}`\n\n"
-        "**ᴄᴜʀʀᴇɴᴛ ᴄʜᴀɴɴᴇʟs & ᴍᴏᴅᴇs:**\n"
-    )
-    
-    keyboard_buttons = [
-        [InlineKeyboardButton(f"ғsᴜʙ ᴍᴏᴅᴇ: {f_status}", callback_data="adm_toggle_fsub", style=enums.ButtonStyle.PRIMARY)]
-    ]
-    
-    # Generate interactive slot rows dynamically
-    for idx, ch in enumerate(channels):
-        ch_id = ch["chat_id"]
-        ch_type = ch["type"].upper()
-        display_id = f"`{ch_id}`" if ch_id else "`Not Set ❌`"
-        mode_icon = "📥" if ch_type == "REQUEST" else "📢"
-        
-        text += f"{idx+1}️⃣ ᴄʜ {idx+1}: {display_id} | Mode: **{ch_type}**\n"
-        
-        # Grid creation per channel slot control
-        keyboard_buttons.append([
-            InlineKeyboardButton(f"✨ sᴇᴛ ᴄʜ {idx+1}", callback_data=f"adm_slot_{idx}"),
-            InlineKeyboardButton(f"{mode_icon} {ch_type} ᴍᴏᴅᴇ", callback_data=f"adm_togmode_{idx}")
-        ])
-        
-    text += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n💡 *Note: Bot ko channel me Admin banana compulsory hai.*"
-    keyboard_buttons.append([InlineKeyboardButton("ʙᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="adm_back_main")])
-    
-    return text, InlineKeyboardMarkup(keyboard_buttons)
-
+# 🔥 UPDATED: Added Live Token Progress Bar Logic Inside Verification Layout
 async def get_verify_menu_layout(settings):
     v_status = "🟢 ᴏɴ" if settings.get("verify_mode", True) else "🔴 ᴏғғ"
     prem_mode_status = "🟢 ᴏɴ" if settings.get("premium_mode", False) else "🔴 ᴏғғ"
     v_expire_hours = settings.get("verify_expire_time", 86400) // 3600
     
+    # 📊 Live Token Progress Bar Settings
     try:
         today_tokens = await db.get_today_tokens()
     except Exception:
         today_tokens = 0
         
-    daily_target = 1000  
+    daily_target = 1000  # Aap apna target change kar sakte ho (e.g. 500, 1000, 2000)
     percentage = min(int((today_tokens / daily_target) * 100), 100)
     
+    # Custom Progress Bar Build
     bar_length = 10
     filled_length = int(bar_length * percentage // 100)
     bar = "█" * filled_length + "░" * (bar_length - filled_length)
@@ -132,7 +86,7 @@ async def get_verify_menu_layout(settings):
         [InlineKeyboardButton(f"ᴘʀᴇᴍɪᴜᴍ ᴍᴏᴅᴇ: {prem_mode_status}", callback_data="adm_toggle_premium_mode", style=enums.ButtonStyle.PRIMARY)],
         [InlineKeyboardButton("sᴇᴛ ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴛɪᴍᴇ 🔑", callback_data="adm_set_token_time", style=enums.ButtonStyle.PRIMARY)],
         [InlineKeyboardButton("sᴇᴛ sʜᴏʀᴛᴇɴᴇʀ ᴀᴘɪ ɪᴅ 🔗", callback_data="adm_change_link")],
-        [InlineKeyboardButton("🔄 ʀᴇғʀᴇsʜ sᴛᴀᴛs", callback_data="adm_sub_verify")],  
+        [InlineKeyboardButton("🔄 ʀᴇғʀᴇsʜ sᴛᴀᴛs", callback_data="adm_sub_verify")],  # Loop response refresh key
         [InlineKeyboardButton("ʙᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="adm_back_main")]
     ])
     return text, keyboard
@@ -153,7 +107,7 @@ async def get_delete_menu_layout(settings):
     return text, keyboard
 
 async def get_start_page_menu_layout(settings):
-    has_text = "🟢 ᴄᴜsᴛᴏᴍ ᴛᴇxᴛ ᴇɴᴀʙʟᴇᴅ" if settings.get("custom_start_text") else "⚪ ᴅᴇғᴀᴜʟᴛ ᴛᴇxᴛ ᴇɴᴀʙʟᴇned"
+    has_text = "🟢 ᴄᴜsᴛᴏᴍ ᴛᴇxᴛ ᴇɴᴀʙʟᴇᴅ" if settings.get("custom_start_text") else "⚪ ᴅᴇғᴀᴜʟᴛ ᴛᴇxᴛ ᴇɴᴀʙʟᴇᴅ"
     s_status = "🟢 ᴏɴ (ʙʟᴜʀʀᴇᴅ ɪᴍᴀɢᴇ)" if settings.get("start_spoiler", False) else "🔴 ᴏғғ (ᴄʟᴇᴀʀ ɪᴍᴀɢᴇ)"
     text = (
         "🎨 **sᴛᴀʀᴛ ᴘᴀɢᴇ ᴄᴏɴғɪɢᴜʀᴀᴛɪᴏɴ**\n"
@@ -239,13 +193,6 @@ async def admin_callback(client, query):
         except Exception:
             await client.send_message(chat_id, text, reply_markup=keyboard)
         return
-    elif action == "sub_fsub":  
-        text, keyboard = await get_fsub_menu_layout(settings)
-        try:
-            await query.message.edit_text(text, reply_markup=keyboard)
-        except Exception:
-            await client.send_message(chat_id, text, reply_markup=keyboard)
-        return
     elif action == "sub_delete":
         text, keyboard = await get_delete_menu_layout(settings)
         try:
@@ -291,62 +238,6 @@ async def admin_callback(client, query):
         except Exception:
             await client.send_message(chat_id, text, reply_markup=keyboard)
 
-    elif action == "toggle_fsub":  
-        new_val = not settings.get("fsub_mode", False)
-        await db.update_setting("fsub_mode", new_val)
-        await query.answer(f"ғsᴜʙ ᴍᴏᴅᴇ updated !! {'🟢 ᴏɴ' if new_val else '🔴 ᴏғғ'}", show_alert=True)
-        settings = await db.get_settings()
-        text, keyboard = await get_fsub_menu_layout(settings)
-        try:
-            await query.message.edit_text(text, reply_markup=keyboard)
-        except Exception:
-            await client.send_message(chat_id, text, reply_markup=keyboard)
-
-    elif action.startswith("slot_"):  
-        slot_idx = int(action.split("_")[1])
-        try:
-            await query.message.delete()
-        except Exception:
-            pass
-        prompt_text = f"📢 **[sʟᴏᴛ {slot_idx+1}] sᴇɴᴅ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ɪᴅ (ᴇɢ: -100xxxxxxxx):**\n\n*Type 0 to clear this slot.\nType /cancel to abort.*"
-        ask_msg = await client.send_message(chat_id, prompt_text)
-        ADMIN_STATE[chat_id] = {"step": f"set_fsub_{slot_idx}", "bot_msg_id": ask_msg.id}
-        return
-
-    # 🔥 NEW: Toggle Individual Channel Mode (Normal <-> Request) Callback Handler
-    elif action.startswith("togmode_"):
-        slot_idx = int(action.split("_")[1])
-        current_channels = settings.get("fsub_channels", [])
-        
-        # Safe structural filling up to slot_idx
-        while len(current_channels) <= slot_idx:
-            current_channels.append({"chat_id": None, "type": "normal"})
-            
-        # Parse standard schema object format
-        target = current_channels[slot_idx]
-        if not isinstance(target, dict):
-            current_channels[slot_idx] = {"chat_id": target, "type": "normal"}
-            target = current_channels[slot_idx]
-            
-        if not target.get("chat_id"):
-            await query.answer("❌ Pehle is slot me Channel ID setup karein!", show_alert=True)
-            return
-            
-        # Toggle mechanics between modes
-        new_type = "request" if target.get("type", "normal") == "normal" else "normal"
-        current_channels[slot_idx]["type"] = new_type
-        
-        await db.update_setting("fsub_channels", current_channels)
-        await query.answer(f"✅ Slot {slot_idx+1} shifted to {new_type.upper()} Mode!")
-        
-        settings = await db.get_settings()
-        text, keyboard = await get_fsub_menu_layout(settings)
-        try:
-            await query.message.edit_text(text, reply_markup=keyboard)
-        except Exception:
-            await client.send_message(chat_id, text, reply_markup=keyboard)
-        return
-
     elif action == "toggle_premium_mode":
         new_val = not settings.get("premium_mode", False)
         await db.update_setting("premium_mode", new_val)
@@ -387,7 +278,7 @@ async def admin_callback(client, query):
     elif action == "toggle_spoiler":
         new_val = not settings.get("start_spoiler", False)
         await db.update_setting("start_spoiler", new_val)
-        await query.answer(f"sᴘᴏɪʟᴇʀ ᴍᴏᴅᴇ {'ᴇɴᴀʙʟᴇᴅ 🟢' if new_val else 'ᴅɪsᴀʙʟᴇᴅ 🔴'}")
+        await query.answer(f"sᴘᴏɪʟᴇʀ ᴍᴏᴅᴇ {'ᴇɴᴀʙʟᴇᴅ 🟢' if new_val else 'ᴅɪsᴀʙʟᴇdisabled 🔴'}")
         settings = await db.get_settings()
         text, keyboard = await get_start_page_menu_layout(settings)
         try:
@@ -515,50 +406,9 @@ async def admin_state_listener(client: Client, message):
         asyncio.create_task(auto_delete_message(cancel_msg, 120))
         return
 
-    # 🔥 UPDATED: Dynamic Structured Storage configuration for Slots
-    if step.startswith("set_fsub_"):
-        slot_idx = int(step.split("_")[2])
-        del ADMIN_STATE[chat_id]
-        
-        settings = await db.get_settings()
-        current_channels = settings.get("fsub_channels", [])
-        
-        # Schema layer normalized mapping
-        normalized_channels = []
-        for ch in current_channels:
-            if isinstance(ch, dict):
-                normalized_channels.append(ch)
-            else:
-                normalized_channels.append({"chat_id": ch, "type": "normal"})
-                
-        while len(normalized_channels) < 5:
-            normalized_channels.append({"chat_id": None, "type": "normal"})
-            
-        if text == "0":
-            normalized_channels[slot_idx] = {"chat_id": None, "type": "normal"}
-            msg_alert = f"🗑️ **sʟᴏᴛ {slot_idx+1} ᴄʟᴇᴀʀᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**"
-        else:
-            if not text.startswith("-100") or not text[1:].replace("-","").isdigit():
-                err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ɪᴅ!** Telegram Channel ID always starts with `-100`.")
-                ask_msg = await message.reply(f"📢 **[sʟᴏᴛ {slot_idx+1}] sᴇɴᴅ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ɪᴅ (ᴇɢ: -100xxxxxxxx):**")
-                ADMIN_STATE[chat_id] = {"step": f"set_fsub_{slot_idx}", "bot_msg_id": ask_msg.id}
-                return
-                
-            # Mode ko change nahi karega, jo pehle se set tha wahi rakhega (Default: normal)
-            prev_type = normalized_channels[slot_idx].get("type", "normal")
-            normalized_channels[slot_idx] = {"chat_id": int(text), "type": prev_type}
-            msg_alert = f"✅ **sʟᴏᴛ {slot_idx+1} ᴜᴘᴅᴀᴛᴇᴅ ᴡɪᴛʜ:** `{text}`"
-            
-        # Clear structure to preserve database size but keeping 5 slots layout standard
-        await db.update_setting("fsub_channels", normalized_channels)
-        
-        success_msg = await message.reply(msg_alert, reply_markup=TEMP_BACK_BTN)
-        asyncio.create_task(auto_delete_message(success_msg, 120))
-        return
-
     if step == "add_prem_id":
         if not text.isdigit():
-            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ғᴏrmat!** ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴀ ɴᴜᴍᴇʀɪᴄᴀʟ ᴛᴇʟᴇɢʀᴀᴍ ɪᴅ (ᴄᴀɴᴄᴇʟ: /cancel).")
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!** ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴀ ɴᴜᴍᴇʀɪᴄᴀʟ ᴛᴇʟᴇɢʀᴀᴍ ɪᴅ (ᴄᴀɴᴄᴇʟ: /cancel).")
             ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
             return
         target_id = int(text)
@@ -590,7 +440,7 @@ async def admin_state_listener(client: Client, message):
             await message.reply("❌ **sᴛᴀᴛᴇ ʟᴏsᴛ ᴅᴜᴇ ᴛᴏ ᴄᴀᴄʜᴇ ᴄʟᴇᴀʀ!** Restart process using /settings.", reply_markup=TEMP_BACK_BTN)
             return
         if premium_days == 0 and premium_hours == 0:
-            err_msg = await message.reply("❌ **ʙᴏᴛʜ ᴅᴀʏs ᴀɴᴅ ʜᴏᴜʀs ᴄᴀɴɴᴏᴛ ʙᴇ ᴢᴇ rᴏ!** process cancelled.", reply_markup=TEMP_BACK_BTN)
+            err_msg = await message.reply("❌ **ʙᴏᴛʜ ᴅᴀʏs ᴀɴᴅ ʜᴏᴜʀs ᴄᴀɴɴᴏᴛ ʙᴇ ᴢᴇʀᴏ!** process cancelled.", reply_markup=TEMP_BACK_BTN)
             asyncio.create_task(auto_delete_message(err_msg, 120))
             return
 
@@ -632,7 +482,7 @@ async def admin_state_listener(client: Client, message):
     elif step == "set_buy_link":
         del ADMIN_STATE[chat_id]
         await db.update_setting("premium_buy_link", text)
-        success_msg = await message.reply(f"✅ **ᴘʀᴇᴍɪᴜᴍ ʙᴜʏ ʟɪɴᴋ ᴜᴘᴅᴀᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
+        success_msg = await message.reply(f"✅ **ᴘʀᴇᴍɪᴜᴍ ʙᴜʏ ʟɪɴᴋ ᴜᴘᴅᴀ態ᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
         asyncio.create_task(auto_delete_message(success_msg, 120))
 
     elif step == "set_start_txt":
@@ -656,7 +506,7 @@ async def admin_state_listener(client: Client, message):
             minutes = int(text)
             del ADMIN_STATE[chat_id]
             await db.update_setting("auto_delete_time", minutes * 60)
-            success_msg = await message.reply(f"✅ **ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ sᴇᴛ to {minutes} ᴍɪɴᴜᴛᴇs!**", reply_markup=TEMP_BACK_BTN)
+            success_msg = await message.reply(f"✅ **ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ sᴇᴛ ᴛᴏ {minutes} ᴍɪɴᴜᴛᴇs!**", reply_markup=TEMP_BACK_BTN)
             asyncio.create_task(auto_delete_message(success_msg, 120))
         except ValueError:
             err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!** ᴏɴʟʏ ɴᴜᴍʙᴇʀs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.")
