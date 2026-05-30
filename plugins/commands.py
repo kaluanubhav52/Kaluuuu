@@ -25,7 +25,7 @@ from TechVJ.utils.file_properties import get_name, get_hash, get_media_file_size
 logger = logging.getLogger(__name__)
 
 
-# global 
+# Global Response Modifier Patches
 original_reply = Message.reply
 async def patched_reply(self, *args, **kwargs):
     kwargs.setdefault('quote', False)
@@ -44,7 +44,7 @@ async def patched_reply_photo(self, *args, **kwargs):
     return await original_reply_photo(self, *args, **kwargs)
 Message.reply_photo = patched_reply_photo
 
-# end
+# End Patches
 
 BATCH_FILES = {}
 CANCEL_PROCESSING = {}
@@ -100,11 +100,11 @@ async def show_text_transition(query):
         logger.error(f"Text transition bypass: {e}")
 
 
-# --- 🔥 UPDATED: ADVANCED DYNAMIC MULTI-MODE FSUB CHECKER ---
+# --- 🔥 FIXED & INTEGRATED: ADVANCED DYNAMIC MULTI-MODE FSUB CHECKER ---
 async def check_fsub_requirements(client, message, fsub_channels, data_param=None):
     """
     Naye object-schema validation engine ke sath integrated.
-    Normal aur Dual multi-mode settings ko securely parse aur verify karta hai.
+    Normal aur Request multi-mode settings ko securely parse aur verify karta hai.
     """
     user_id = message.from_user.id
     unjoined_channels = []
@@ -114,7 +114,7 @@ async def check_fsub_requirements(client, message, fsub_channels, data_param=Non
             continue
             
         chat_id = slot.get("chat_id")
-        fsub_type = slot.get("type", "normal") # normal ya dual
+        fsub_type = slot.get("type", "normal").lower() # 'normal' ya 'request'
         
         if not chat_id:
             continue
@@ -122,7 +122,21 @@ async def check_fsub_requirements(client, message, fsub_channels, data_param=Non
         try:
             # ID string parsing safely
             parsed_chat_id = int(chat_id) if str(chat_id).startswith("-100") or isinstance(chat_id, int) else chat_id
-            await client.get_chat_member(parsed_chat_id, user_id)
+            member = await client.get_chat_member(parsed_chat_id, user_id)
+            
+            # 🔴 REQUEST MODE LOGIC
+            if fsub_type == "request":
+                # Agar user fully member/owner/admin nahi hai, toh uska status check karein
+                if member.status not in [enums.ChatMemberStatus.MEMBER, enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR]:
+                    # Telegram par join request send karte hi status RESTRICTED ho jata hai.
+                    # Agar status RESTRICTED bhi nahi hai, matlab user ne request send nahi ki hai.
+                    if member.status != enums.ChatMemberStatus.RESTRICTED:
+                        raise UserNotParticipant
+                        
+            # 📢 NORMAL MODE LOGIC
+            elif member.status in [enums.ChatMemberStatus.BANNED, enums.ChatMemberStatus.LEFT]:
+                raise UserNotParticipant
+
         except UserNotParticipant:
             try:
                 chat_info = await client.get_chat(parsed_chat_id)
@@ -143,8 +157,8 @@ async def check_fsub_requirements(client, message, fsub_channels, data_param=Non
         buttons = []
         # Multi-channel buttons creation according to type mode layout
         for idx, ch in enumerate(unjoined_channels, start=1):
-            # Agar type dual hai toh dynamic visual differentiation display hogi
-            btn_prefix = "🍿 Join Backup" if ch["type"] == "dual" else "📢 Join Channel"
+            # 🔥 FIXED: Yahan 'request' type filter display logic laga di hai
+            btn_prefix = "📥 Request Join" if ch["type"] == "request" else "📢 Join Channel"
             buttons.append([InlineKeyboardButton(f"{btn_prefix} {idx}", url=ch["url"])])
             
         # Try again redirection markup sequence
@@ -154,8 +168,8 @@ async def check_fsub_requirements(client, message, fsub_channels, data_param=Non
         
         fsub_text = (
             f"👋 **Hello {message.from_user.mention},**\n\n"
-            f"⚠️ **Aapko files receive karne ke liye hamare backup channels ko join karna hoga!**\n\n"
-            f"Niche diye gaye sabhi channels ko join karein aur 'Try Again' par click karein."
+            f"⚠️ **Aapko files receive karne ke liye hamare channels ko join/request karna hoga!**\n\n"
+            f"Niche diye gaye sabhi channels par click karke join karein ya Request bhejein, fir 'Try Again' par click karein."
         )
         
         fsub_msg = await message.reply_text(text=fsub_text, reply_markup=InlineKeyboardMarkup(buttons))
@@ -186,7 +200,7 @@ async def start(client, message):
     del_time_seconds = settings.get("auto_delete_time", 1800)
     del_time_minutes = del_time_seconds // 60
     
-    # 🔥 FSUB settings from database updates
+    # FSUB settings from database updates
     is_fsub_mode = settings.get("fsub_mode", False)
     fsub_channels = settings.get("fsub_channels", [])
     
@@ -204,7 +218,7 @@ async def start(client, message):
     
     # Render Main Menu Panel if no parameters passed
     if len(message.command) != 2:
-        # 🛡️ Main panel extraction par bhi FSUB validation trigger hoga (Sirf Non-Premium ke liye)
+        # Main panel extraction par bhi FSUB validation trigger hoga (Sirf Non-Premium ke liye)
         if not is_premium and is_fsub_mode and fsub_channels:
             if not await check_fsub_requirements(client, message, fsub_channels):
                 return
@@ -299,15 +313,14 @@ async def start(client, message):
         if not is_premium and settings.get("premium_mode", False):
             buy_btn = InlineKeyboardMarkup([[InlineKeyboardButton("👑 ᗷᑌY ᑭᖇᗴᗰIᑌᗰ", callback_data='buy_premium_panel', style=enums.ButtonStyle.PRIMARY)]])
             await message.reply_text(
-                "👑 **यह ..."
-                "🔎 ᴄʟɪᴄᴋ ᴏɴ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", 
+                "👑 **यह प्रीमियम मोड फ़ाइल है...**\n🔎 ᴄʟɪᴄᴋ ᴏɴ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", 
                 reply_markup=buy_btn
             )
             return 
 
-        # 🔥 2. DYNAMIC FSUB ENFORCEMENT CHECK (Sirf Non-Premium Users ke liye layer bypass)
+        # 🔥 2. DYNAMIC FSUB ENFORCEMENT CHECK (Sirf Non-Premium Users ke liye)
         if not is_premium and is_fsub_mode and fsub_channels:
-            if not await check_fsub_requirements(client, message, fsub_channels, data_param=data):
+            if not await check_fsub_requirements(client, message, data, data_param=data):
                 return
         
         # 3. Shortlink Token verification check
@@ -549,7 +562,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             [InlineKeyboardButton("⬅️ Back", callback_data="start", style=enums.ButtonStyle.PRIMARY)]
         ])
         
-        # 🔒 Lock Buttons & Show Transition Text First
+        # Lock Buttons & Show Transition Text First
         await show_text_transition(query)
 
         try:
@@ -580,7 +593,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             [InlineKeyboardButton("⬅️ Back", callback_data="buy_premium_panel", style=enums.ButtonStyle.SUCCESS)]
         ])
         
-        # 🔒 Lock Buttons & Show Transition Text First
+        # Lock Buttons & Show Transition Text First
         await show_text_transition(query)
 
         try:
@@ -599,7 +612,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         me2 = (await client.get_me()).mention
         text_content = script.ABOUT_TXT.format(me2)
         
-        # 🔒 Lock Buttons & Show Transition Text First
+        # Lock Buttons & Show Transition Text First
         await show_text_transition(query)
 
         try:
@@ -628,7 +641,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         me2 = (await client.get_me()).mention
         text_content = start_caption.format(query.from_user.mention, me2)
         
-        # 🔒 Lock Buttons & Show Transition Text First
+        # Lock Buttons & Show Transition Text First
         await show_text_transition(query)
 
         try:
@@ -649,7 +662,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         reply_markup = InlineKeyboardMarkup(buttons)
         text_content = script.CLONE_TXT.format(query.from_user.mention)
         
-        # 🔒 Lock Buttons & Show Transition Text First
+        # Lock Buttons & Show Transition Text First
         await show_text_transition(query)
 
         try:
@@ -670,7 +683,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         reply_markup = InlineKeyboardMarkup(buttons)
         text_content = script.HELP_TXT
         
-        # 🔒 Lock Buttons & Show Transition Text First
+        # Lock Buttons & Show Transition Text First
         await show_text_transition(query)
 
         try:
