@@ -100,11 +100,11 @@ async def show_text_transition(query):
         logger.error(f"Text transition bypass: {e}")
 
 
-# --- 🔥 FIXED & INTEGRATED: ADVANCED DYNAMIC MULTI-MODE FSUB CHECKER ---
+# --- 🔥 FIXED & INTEGRATED: ADVANCED DYNAMIC MULTI-MODE FSUB CHECKER WITH AUTO-REQUEST LINK GENERATION ---
 async def check_fsub_requirements(client, message, fsub_channels, data_param=None):
     """
-    Naye object-schema validation engine ke sath integrated.
     Normal aur Request multi-mode settings ko securely parse aur verify karta hai.
+    Agar mode 'request' hai, toh telegram API se special Admin Approval link create karta hai.
     """
     user_id = message.from_user.id
     unjoined_channels = []
@@ -126,7 +126,7 @@ async def check_fsub_requirements(client, message, fsub_channels, data_param=Non
             
             # 🔴 REQUEST MODE LOGIC
             if fsub_type == "request":
-                # Agar user fully member/owner/admin nahi hai, toh uska status check karein
+                # Agar user fully member/owner/admin nahi hai, toh uska status check karte hain
                 if member.status not in [enums.ChatMemberStatus.MEMBER, enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR]:
                     # Telegram par join request send karte hi status RESTRICTED ho jata hai.
                     # Agar status RESTRICTED bhi nahi hai, matlab user ne request send nahi ki hai.
@@ -139,15 +139,34 @@ async def check_fsub_requirements(client, message, fsub_channels, data_param=Non
 
         except UserNotParticipant:
             try:
+                # Channel ki primary data nikalenge
                 chat_info = await client.get_chat(parsed_chat_id)
-                invite_link = chat_info.invite_link if chat_info.invite_link else f"https://t.me/{chat_info.username}"
+                invite_link = None
+
+                # 🔥 REQUEST MODE FEATURE: On-the-spot Join Request link automatic generate karein
+                if fsub_type == "request":
+                    try:
+                        # Bot khud telegram API ko query karke special 'creates_join_request' link banayega
+                        new_link = await client.create_chat_invite_link(
+                            chat_id=parsed_chat_id,
+                            name=f"FSub Request Link {user_id}",
+                            creates_join_request=True  # 👈 Yeh line compulsory hai join request popup ke liye
+                        )
+                        invite_link = new_link.invite_link
+                    except Exception as invite_err:
+                        logger.error(f"Failed to create admin approval link for {chat_id}: {invite_err}")
+                
+                # Normal mode ya dynamic fallback ke liye default link binding
+                if not invite_link:
+                    invite_link = chat_info.invite_link if chat_info.invite_link else f"https://t.me/{chat_info.username}"
+
                 unjoined_channels.append({
                     "title": chat_info.title, 
                     "url": invite_link,
                     "type": fsub_type
                 })
             except Exception as e:
-                logger.error(f"Failed to fetch invite link for channel {chat_id}: {e}")
+                logger.error(f"Failed to fetch or generate invite link for channel {chat_id}: {e}")
                 continue
         except Exception as e:
             logger.error(f"Error tracking dynamic FSUB channel {chat_id}: {e}")
@@ -155,9 +174,8 @@ async def check_fsub_requirements(client, message, fsub_channels, data_param=Non
 
     if unjoined_channels:
         buttons = []
-        # Multi-channel buttons creation according to type mode layout
+        # Multi-channel buttons layout display logic
         for idx, ch in enumerate(unjoined_channels, start=1):
-            # 🔥 FIXED: Yahan 'request' type filter display logic laga di hai
             btn_prefix = "📥 Request Join" if ch["type"] == "request" else "📢 Join Channel"
             buttons.append([InlineKeyboardButton(f"{btn_prefix} {idx}", url=ch["url"])])
             
@@ -169,7 +187,7 @@ async def check_fsub_requirements(client, message, fsub_channels, data_param=Non
         fsub_text = (
             f"👋 **Hello {message.from_user.mention},**\n\n"
             f"⚠️ **Aapko files receive karne ke liye hamare channels ko join/request karna hoga!**\n\n"
-            f"Niche diye gaye sabhi channels par click karke join karein ya Request bhejein, fir 'Try Again' par click karein."
+            f"Niche diye gaye sabhi channels par click karke join/request bhejein, fir **'Try Again'** par click karein."
         )
         
         fsub_msg = await message.reply_text(text=fsub_text, reply_markup=InlineKeyboardMarkup(buttons))
@@ -320,7 +338,7 @@ async def start(client, message):
 
         # 🔥 2. DYNAMIC FSUB ENFORCEMENT CHECK (Sirf Non-Premium Users ke liye)
         if not is_premium and is_fsub_mode and fsub_channels:
-            if not await check_fsub_requirements(client, message, data, data_param=data):
+            if not await check_fsub_requirements(client, message, fsub_channels, data_param=data):
                 return
         
         # 3. Shortlink Token verification check
