@@ -100,39 +100,52 @@ async def show_text_transition(query):
         logger.error(f"Text transition bypass: {e}")
 
 
-# --- 🔥 NEW: DYNAMIC FSUB CHECKER ENGINE ---
+# --- 🔥 UPDATED: ADVANCED DYNAMIC MULTI-MODE FSUB CHECKER ---
 async def check_fsub_requirements(client, message, fsub_channels, data_param=None):
     """
-    Aapke dynamic panel ke multiple channels (max 5) ko validation loop mein pass karta hai.
-    Agar user kisi channel mein nahi hai, toh automatic single/multi verification interface render karega.
+    Naye object-schema validation engine ke sath integrated.
+    Normal aur Dual multi-mode settings ko securely parse aur verify karta hai.
     """
     user_id = message.from_user.id
     unjoined_channels = []
     
-    for channel in fsub_channels:
-        if not channel:
+    for slot in fsub_channels:
+        if not slot or not isinstance(slot, dict):
             continue
+            
+        chat_id = slot.get("chat_id")
+        fsub_type = slot.get("type", "normal") # normal ya dual
+        
+        if not chat_id:
+            continue
+            
         try:
-            # ID string ko integer me convert karte hain agar required ho
-            chat_id = int(channel) if str(channel).startswith("-100") or isinstance(channel, int) else channel
-            await client.get_chat_member(chat_id, user_id)
+            # ID string parsing safely
+            parsed_chat_id = int(chat_id) if str(chat_id).startswith("-100") or isinstance(chat_id, int) else chat_id
+            await client.get_chat_member(parsed_chat_id, user_id)
         except UserNotParticipant:
             try:
-                chat_info = await client.get_chat(chat_id)
+                chat_info = await client.get_chat(parsed_chat_id)
                 invite_link = chat_info.invite_link if chat_info.invite_link else f"https://t.me/{chat_info.username}"
-                unjoined_channels.append({"title": chat_info.title, "url": invite_link})
+                unjoined_channels.append({
+                    "title": chat_info.title, 
+                    "url": invite_link,
+                    "type": fsub_type
+                })
             except Exception as e:
-                logger.error(f"Failed to fetch invite link for channel {channel}: {e}")
+                logger.error(f"Failed to fetch invite link for channel {chat_id}: {e}")
                 continue
         except Exception as e:
-            logger.error(f"Error tracking dynamic FSUB channel {channel}: {e}")
+            logger.error(f"Error tracking dynamic FSUB channel {chat_id}: {e}")
             continue
 
     if unjoined_channels:
         buttons = []
-        # Multi-channel buttons creation
+        # Multi-channel buttons creation according to type mode layout
         for idx, ch in enumerate(unjoined_channels, start=1):
-            buttons.append([InlineKeyboardButton(f"📢 Join Channel {idx}", url=ch["url"])])
+            # Agar type dual hai toh dynamic visual differentiation display hogi
+            btn_prefix = "🍿 Join Backup" if ch["type"] == "dual" else "📢 Join Channel"
+            buttons.append([InlineKeyboardButton(f"{btn_prefix} {idx}", url=ch["url"])])
             
         # Try again redirection markup sequence
         bot_username = client.me.username
@@ -286,7 +299,7 @@ async def start(client, message):
         if not is_premium and settings.get("premium_mode", False):
             buy_btn = InlineKeyboardMarkup([[InlineKeyboardButton("👑 ᗷᑌY ᑭᖇᗴᗰIᑌᗰ", callback_data='buy_premium_panel', style=enums.ButtonStyle.PRIMARY)]])
             await message.reply_text(
-                "👑 **यह फाइल प्रीमियम है!**\n\nइसे एक्सेस करने के लिए कृपया प्रीमियम लें।\n\n"
+                "👑 **यह ..."
                 "🔎 ᴄʟɪᴄᴋ ᴏɴ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", 
                 reply_markup=buy_btn
             )
