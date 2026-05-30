@@ -609,3 +609,83 @@ async def cb_handler(client: Client, query: CallbackQuery):
                 await client.send_photo(query.message.chat.id, photo=start_photo, caption=text_content, reply_markup=reply_markup, has_spoiler=is_spoiler)
             else:
                 await client.send_message(query.message.chat.id, text=text_content, reply_markup=reply_markup)
+#checking
+
+async def not_joined(client: Client, message: Message):
+    temp = await message.reply("<b><i>Checking Subscription...</i></b>")
+    user_id = message.from_user.id
+    buttons = []
+    count = 0
+
+    try:
+        all_channels = await db.show_channels()  
+        for total, chat_id in enumerate(all_channels, start=1):
+            mode = await db.get_channel_mode(chat_id)  
+
+            # ✨ HERE IS THE FIX: message.reply_chat_action ki jagah client.send_chat_action use kiya hai sahi format me
+            await client.send_chat_action(chat_id=message.chat.id, action=ChatAction.TYPING)
+
+            if not await is_sub(client, user_id, chat_id):
+                try:
+                    if chat_id in chat_data_cache:
+                        data = chat_data_cache[chat_id]
+                    else:
+                        data = await client.get_chat(chat_id)
+                        chat_data_cache[chat_id] = data
+
+                    name = data.title
+
+                    if mode == "on" and not data.username:
+                        invite = await client.create_chat_invite_link(
+                            chat_id=chat_id,
+                            creates_join_request=True,
+                            expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None
+                        )
+                        link = invite.invite_link
+                    else:
+                        if data.username:
+                            link = f"https://t.me/{data.username}"
+                        else:
+                            invite = await client.create_chat_invite_link(
+                                chat_id=chat_id,
+                                expire_date=datetime.utcnow() + timedelta(seconds=FSUB_LINK_EXPIRY) if FSUB_LINK_EXPIRY else None)
+                            link = invite.invite_link
+
+                    buttons.append([InlineKeyboardButton(text=name, url=link)])
+                    count += 1
+                    await temp.edit(f"<b>{'! ' * count}</b>")
+
+                except Exception as e:
+                    print(f"Error with chat {chat_id}: {e}")
+                    try: return await temp.edit(f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ @rohit_1888</i></b>")
+                    except: return
+
+        try:
+            buttons.append([
+                InlineKeyboardButton(
+                    text='♻️ Tʀʏ Aɢᴀɪɴ',
+                    url=f"https://t.me/{client.username}?start={message.command[1]}"
+                )
+            ])
+        except IndexError:
+            pass
+
+        await message.reply_photo(
+            photo=FORCE_PIC,
+            caption=FORCE_MSG.format(
+                first=message.from_user.first_name,
+                last=message.from_user.last_name,
+                username=None if not message.from_user.username else '@' + message.from_user.username,
+                mention=message.from_user.mention,
+                id=message.from_user.id
+            ),
+            reply_markup=InlineKeyboardMarkup(buttons),
+        )
+
+    except Exception as e:
+        print(f"Final Error: {e}")
+        try: await temp.edit(f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ...</i></b>")
+        except: pass
+            
+
+
