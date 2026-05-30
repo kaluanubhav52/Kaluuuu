@@ -10,7 +10,7 @@ from urllib.parse import quote_plus
 
 from validators import domain
 from pyrogram import Client, filters, enums
-from pyrogram.errors import ChatAdminRequired, FloodWait, UserNotParticipant
+from pyrogram.errors import ChatAdminRequired, FloodWait
 from pyrogram.types import *
 
 # Internal module imports
@@ -100,58 +100,6 @@ async def show_text_transition(query):
         logger.error(f"Text transition bypass: {e}")
 
 
-# --- 🔥 NEW: DYNAMIC FSUB CHECKER ENGINE ---
-async def check_fsub_requirements(client, message, fsub_channels, data_param=None):
-    """
-    Aapke dynamic panel ke multiple channels (max 5) ko validation loop mein pass karta hai.
-    Agar user kisi channel mein nahi hai, toh automatic single/multi verification interface render karega.
-    """
-    user_id = message.from_user.id
-    unjoined_channels = []
-    
-    for channel in fsub_channels:
-        if not channel:
-            continue
-        try:
-            # ID string ko integer me convert karte hain agar required ho
-            chat_id = int(channel) if str(channel).startswith("-100") or isinstance(channel, int) else channel
-            await client.get_chat_member(chat_id, user_id)
-        except UserNotParticipant:
-            try:
-                chat_info = await client.get_chat(chat_id)
-                invite_link = chat_info.invite_link if chat_info.invite_link else f"https://t.me/{chat_info.username}"
-                unjoined_channels.append({"title": chat_info.title, "url": invite_link})
-            except Exception as e:
-                logger.error(f"Failed to fetch invite link for channel {channel}: {e}")
-                continue
-        except Exception as e:
-            logger.error(f"Error tracking dynamic FSUB channel {channel}: {e}")
-            continue
-
-    if unjoined_channels:
-        buttons = []
-        # Multi-channel buttons creation
-        for idx, ch in enumerate(unjoined_channels, start=1):
-            buttons.append([InlineKeyboardButton(f"📢 Join Channel {idx}", url=ch["url"])])
-            
-        # Try again redirection markup sequence
-        bot_username = client.me.username
-        retry_url = f"https://t.me/{bot_username}?start={data_param}" if data_param else f"https://t.me/{bot_username}?start=start"
-        buttons.append([InlineKeyboardButton("🔄 Try Again 🔄", url=retry_url)])
-        
-        fsub_text = (
-            f"👋 **Hello {message.from_user.mention},**\n\n"
-            f"⚠️ **Aapko files receive karne ke liye hamare backup channels ko join karna hoga!**\n\n"
-            f"Niche diye gaye sabhi channels ko join karein aur 'Try Again' par click karein."
-        )
-        
-        fsub_msg = await message.reply_text(text=fsub_text, reply_markup=InlineKeyboardMarkup(buttons))
-        asyncio.create_task(auto_delete_msg(fsub_msg, 300))
-        return False
-        
-    return True
-
-
 # --- BOT ROUTING ENGINE ---
 
 @Client.on_message(filters.command("start") & filters.incoming)
@@ -173,10 +121,6 @@ async def start(client, message):
     del_time_seconds = settings.get("auto_delete_time", 1800)
     del_time_minutes = del_time_seconds // 60
     
-    # 🔥 FSUB settings from database updates
-    is_fsub_mode = settings.get("fsub_mode", False)
-    fsub_channels = settings.get("fsub_channels", [])
-    
     is_premium = await db.check_premium_status(user_id)
     
     start_photo = settings.get("start_photo", None)
@@ -191,11 +135,6 @@ async def start(client, message):
     
     # Render Main Menu Panel if no parameters passed
     if len(message.command) != 2:
-        # 🛡️ Main panel extraction par bhi FSUB validation trigger hoga (Sirf Non-Premium ke liye)
-        if not is_premium and is_fsub_mode and fsub_channels:
-            if not await check_fsub_requirements(client, message, fsub_channels):
-                return
-
         await client.send_chat_action(message.chat.id, enums.ChatAction.TYPING)
         await asyncio.sleep(1)
         
@@ -206,7 +145,7 @@ async def start(client, message):
             ],
             [
                 InlineKeyboardButton('💁‍♀️ Fᴇᴀᴛᴜʀᴇs', callback_data='help'),
-                InlineKeyboardButton('😊 AʙᴏᴜT', callback_data='about')
+                InlineKeyboardButton('😊 Aʙᴏᴜᴛ', callback_data='about')
             ],
             [InlineKeyboardButton('⭐ ᗷᑌY ᑭᖇᗴᗰIᑌᗰ ⭐', callback_data='buy_premium_panel', style=enums.ButtonStyle.DANGER)],
             [InlineKeyboardButton('⁉️ SᴇᴛᴛɪɴGS ⁉️', callback_data='open_admin_from_start', style=enums.ButtonStyle.PRIMARY)]
@@ -282,7 +221,6 @@ async def start(client, message):
 
     # --- FILE DELIVERY ENGINE ---
     try:
-        # 1. Premium validation check
         if not is_premium and settings.get("premium_mode", False):
             buy_btn = InlineKeyboardMarkup([[InlineKeyboardButton("👑 ᗷᑌY ᑭᖇᗴᗰIᑌᗰ", callback_data='buy_premium_panel', style=enums.ButtonStyle.PRIMARY)]])
             await message.reply_text(
@@ -291,13 +229,7 @@ async def start(client, message):
                 reply_markup=buy_btn
             )
             return 
-
-        # 🔥 2. DYNAMIC FSUB ENFORCEMENT CHECK (Sirf Non-Premium Users ke liye layer bypass)
-        if not is_premium and is_fsub_mode and fsub_channels:
-            if not await check_fsub_requirements(client, message, fsub_channels, data_param=data):
-                return
         
-        # 3. Shortlink Token verification check
         if not is_premium and is_verify_mode and not await check_verification(client, user_id):
             await db.increment_token_count()
             

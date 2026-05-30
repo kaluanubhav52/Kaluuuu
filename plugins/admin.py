@@ -42,50 +42,11 @@ async def get_main_panel_layout(settings):
     )
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🔐 ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴍᴇɴᴜ", callback_data="adm_sub_verify", style=enums.ButtonStyle.PRIMARY)],
-        [InlineKeyboardButton("📢 ғᴏʀᴄᴇ sᴜʙ ᴍᴇɴᴜ", callback_data="adm_sub_fsub", style=enums.ButtonStyle.PRIMARY)],  # Added FSUB Link here
         [InlineKeyboardButton("⏱️ ᴀᴜᴛᴏ ᴅᴇʟᴇᴛᴇ ᴍᴇɴᴜ", callback_data="adm_sub_delete", style=enums.ButtonStyle.PRIMARY)],
         [InlineKeyboardButton("🎨 sᴛᴀʀᴛ ᴍᴇɴᴜ", callback_data="adm_sub_start_page", style=enums.ButtonStyle.PRIMARY)],
         [InlineKeyboardButton("👑 ᴘʀᴇᴍɪᴜᴍ ᴍᴇɴᴜ", callback_data="adm_sub_premium", style=enums.ButtonStyle.PRIMARY)],
         [InlineKeyboardButton(f"🛡️ ᴘʀᴏᴛᴇᴄᴛ ᴄᴏɴᴛᴇɴᴛ: {p_status}", callback_data="adm_toggle_protect", style=enums.ButtonStyle.PRIMARY)],
         [InlineKeyboardButton("ʜᴏᴍᴇ", callback_data='start', style=enums.ButtonStyle.DANGER)]
-    ])
-    return text, keyboard
-
-# 🔥 NEW: Force Subscribe Menu Layout
-async def get_fsub_menu_layout(settings):
-    f_status = "🟢 ᴏɴ" if settings.get("fsub_mode", False) else "🔴 ᴏғғ"
-    channels = settings.get("fsub_channels", [])
-    
-    # Ensuring we always display 5 slots
-    while len(channels) < 5:
-        channels.append("Not Set ❌")
-        
-    text = (
-        "📢 **ғᴏʀᴄᴇ sᴜʙsᴄʀɪʙᴇ ᴄᴏɴғɪɢᴜʀᴀᴛɪᴏɴ**\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"⚙️ **ғsᴜʙ sᴛᴀᴛᴜs:** `{f_status}`\n\n"
-        "**ᴄᴜʀʀᴇɴᴛ ᴄʜᴀɴɴᴇʟs:**\n"
-        f"1️⃣ ᴄʜᴀɴɴᴇʟ 1: `{channels[0]}`\n"
-        f"2️⃣ ᴄʜᴀɴɴᴇʟ 2: `{channels[1]}`\n"
-        f"3️⃣ ᴄʜᴀɴɴᴇʟ 3: `{channels[2]}`\n"
-        f"4️⃣ ᴄʜᴀɴɴᴇʟ 4: `{channels[3]}`\n"
-        f"5️⃣ ᴄʜᴀɴɴᴇʟ 5: `{channels[4]}`\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "💡 *Note: Bot ko channel me Admin banana compulsory hai.*"
-    )
-    
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"ғsᴜʙ ᴍᴏᴅᴇ: {f_status}", callback_data="adm_toggle_fsub", style=enums.ButtonStyle.PRIMARY)],
-        [
-            InlineKeyboardButton("✨ ᴄʜ 1", callback_data="adm_slot_0"),
-            InlineKeyboardButton("✨ ᴄʜ 2", callback_data="adm_slot_1"),
-            InlineKeyboardButton("✨ ᴄʜ 3", callback_data="adm_slot_2")
-        ],
-        [
-            InlineKeyboardButton("✨ ᴄʜ 4", callback_data="adm_slot_3"),
-            InlineKeyboardButton("✨ ᴄʜ 5", callback_data="adm_slot_4")
-        ],
-        [InlineKeyboardButton("ʙᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="adm_back_main")]
     ])
     return text, keyboard
 
@@ -232,13 +193,6 @@ async def admin_callback(client, query):
         except Exception:
             await client.send_message(chat_id, text, reply_markup=keyboard)
         return
-    elif action == "sub_fsub":  # 🔥 Opens Force Sub Menu
-        text, keyboard = await get_fsub_menu_layout(settings)
-        try:
-            await query.message.edit_text(text, reply_markup=keyboard)
-        except Exception:
-            await client.send_message(chat_id, text, reply_markup=keyboard)
-        return
     elif action == "sub_delete":
         text, keyboard = await get_delete_menu_layout(settings)
         try:
@@ -284,28 +238,6 @@ async def admin_callback(client, query):
         except Exception:
             await client.send_message(chat_id, text, reply_markup=keyboard)
 
-    elif action == "toggle_fsub":  # 🔥 Toggle FSUB Mode On/Off
-        new_val = not settings.get("fsub_mode", False)
-        await db.update_setting("fsub_mode", new_val)
-        await query.answer(f"ғsᴜʙ ᴍᴏᴅᴇ updated !! {'🟢 ᴏɴ' if new_val else '🔴 ᴏғғ'}", show_alert=True)
-        settings = await db.get_settings()
-        text, keyboard = await get_fsub_menu_layout(settings)
-        try:
-            await query.message.edit_text(text, reply_markup=keyboard)
-        except Exception:
-            await client.send_message(chat_id, text, reply_markup=keyboard)
-
-    elif action.startswith("slot_"):  # 🔥 Handle Slot selection 0 to 4
-        slot_idx = int(action.split("_")[1])
-        try:
-            await query.message.delete()
-        except Exception:
-            pass
-        prompt_text = f"📢 **[sʟᴏᴛ {slot_idx+1}] sᴇɴᴅ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ɪᴅ (ᴇɢ: -100xxxxxxxx):**\n\n*Type 0 to clear this slot.\nType /cancel to abort.*"
-        ask_msg = await client.send_message(chat_id, prompt_text)
-        ADMIN_STATE[chat_id] = {"step": f"set_fsub_{slot_idx}", "bot_msg_id": ask_msg.id}
-        return
-
     elif action == "toggle_premium_mode":
         new_val = not settings.get("premium_mode", False)
         await db.update_setting("premium_mode", new_val)
@@ -346,7 +278,7 @@ async def admin_callback(client, query):
     elif action == "toggle_spoiler":
         new_val = not settings.get("start_spoiler", False)
         await db.update_setting("start_spoiler", new_val)
-        await query.answer(f"sᴘᴏɪʟᴇʀ ᴍᴏᴅᴇ {'ᴇɴᴀʙʟᴇᴅ 🟢' if new_val else 'ᴅɪsᴀʙʟᴇᴅ 🔴'}")
+        await query.answer(f"sᴘᴏɪʟᴇʀ ᴍᴏᴅᴇ {'ᴇɴᴀʙʟᴇᴅ 🟢' if new_val else 'ᴅɪsᴀʙʟᴇdisabled 🔴'}")
         settings = await db.get_settings()
         text, keyboard = await get_start_page_menu_layout(settings)
         try:
@@ -474,42 +406,6 @@ async def admin_state_listener(client: Client, message):
         asyncio.create_task(auto_delete_message(cancel_msg, 120))
         return
 
-    # 🔥 NEW: Handle Setting Channel IDs dynamically for slots 0-4
-    if step.startswith("set_fsub_"):
-        slot_idx = int(step.split("_")[2])
-        del ADMIN_STATE[chat_id]
-        
-        settings = await db.get_settings()
-        current_channels = settings.get("fsub_channels", [])
-        
-        # Make sure structure has 5 slots populated
-        while len(current_channels) < 5:
-            current_channels.append(None)
-            
-        if text == "0":
-            current_channels[slot_idx] = None
-            msg_alert = f"🗑️ **sʟᴏᴛ {slot_idx+1} ᴄʟᴇᴀʀᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**"
-        else:
-            # Basic Telegram ID clean validation check
-            if not text.startswith("-100") or not text[1:].replace("-","").isdigit():
-                err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ɪᴅ!** Telegram Channel ID always starts with `-100`.")
-                # Put user back in process
-                ask_msg = await message.reply(f"📢 **[sʟᴏᴛ {slot_idx+1}] sᴇɴᴅ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ ɪᴅ (ᴇɢ: -100xxxxxxxx):**")
-                ADMIN_STATE[chat_id] = {"step": f"set_fsub_{slot_idx}", "bot_msg_id": ask_msg.id}
-                return
-                
-            current_channels[slot_idx] = int(text)
-            msg_alert = f"✅ **sʟᴏᴛ {slot_idx+1} ᴜᴘᴅᴀᴛᴇᴅ ᴡɪᴛʜ:** `{text}`"
-            
-        # Clean up list from trailing empty Nones before saving if preferred, or keep structure intact
-        # We preserve structure to lock 5 placeholders
-        cleaned_channels = [c for c in current_channels if c is not None and str(c).startswith("-100")]
-        await db.update_setting("fsub_channels", cleaned_channels)
-        
-        success_msg = await message.reply(msg_alert, reply_markup=TEMP_BACK_BTN)
-        asyncio.create_task(auto_delete_message(success_msg, 120))
-        return
-
     if step == "add_prem_id":
         if not text.isdigit():
             err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!** ᴘʟᴇᴀsᴇ sᴇɴᴅ ᴀ ɴᴜᴍᴇʀɪᴄᴀʟ ᴛᴇʟᴇɢʀᴀᴍ ɪᴅ (ᴄᴀɴᴄᴇʟ: /cancel).")
@@ -586,7 +482,7 @@ async def admin_state_listener(client: Client, message):
     elif step == "set_buy_link":
         del ADMIN_STATE[chat_id]
         await db.update_setting("premium_buy_link", text)
-        success_msg = await message.reply(f"✅ **ᴘʀᴇᴍɪᴜᴍ ʙᴜʏ ʟɪɴᴋ ᴜᴘᴅᴀᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
+        success_msg = await message.reply(f"✅ **ᴘʀᴇᴍɪᴜᴍ ʙᴜʏ ʟɪɴᴋ ᴜᴘᴅᴀ態ᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
         asyncio.create_task(auto_delete_message(success_msg, 120))
 
     elif step == "set_start_txt":
@@ -610,7 +506,7 @@ async def admin_state_listener(client: Client, message):
             minutes = int(text)
             del ADMIN_STATE[chat_id]
             await db.update_setting("auto_delete_time", minutes * 60)
-            success_msg = await message.reply(f"✅ **ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ sᴇᴛ to {minutes} ᴍɪɴᴜᴛᴇs!**", reply_markup=TEMP_BACK_BTN)
+            success_msg = await message.reply(f"✅ **ᴀᴜᴛᴏ-ᴅᴇʟᴇᴛᴇ ᴛɪᴍᴇʀ sᴇᴛ ᴛᴏ {minutes} ᴍɪɴᴜᴛᴇs!**", reply_markup=TEMP_BACK_BTN)
             asyncio.create_task(auto_delete_message(success_msg, 120))
         except ValueError:
             err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!** ᴏɴʟʏ ɴᴜᴍʙᴇʀs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.")
