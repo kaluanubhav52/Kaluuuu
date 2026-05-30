@@ -13,7 +13,7 @@ from plugins.dbusers import *
 
 
 #Request force sub mode commad,,,,,,
-@Client.on_message(filters.command('fsub_mode') & filters.private & admin)
+@Client.on_message(filters.command('fsub_mode') & filters.private & ADMINS)
 async def change_force_sub_mode(client: Client, message: Message):
     temp = await message.reply("<b><i>ᴡᴀɪᴛ ᴀ sᴇᴄ..</i></b>", quote=True)
     channels = await db.show_channels()
@@ -77,7 +77,7 @@ async def handle_join_request(client, chat_join_request):
 
 
 # Add channel
-@Client.on_message(filters.command('addchnl') & filters.private & admin)
+@Client.on_message(filters.command('addchnl') & filters.private & ADMINS)
 async def add_force_sub(client: Client, message: Message):
     temp = await message.reply("Wait a sec...", quote=True)
     args = message.text.split(maxsplit=1)
@@ -127,7 +127,7 @@ async def add_force_sub(client: Client, message: Message):
 
 
 # Delete channel
-@Client.on_message(filters.command('delchnl') & filters.private & admin)
+@Client.on_message(filters.command('delchnl') & filters.private & ADMINS)
 async def del_force_sub(client: Client, message: Message):
     temp = await message.reply("<b><i>ᴡᴀɪᴛ ᴀ sᴇᴄ..</i></b>", quote=True)
     args = message.text.split(maxsplit=1)
@@ -155,7 +155,7 @@ async def del_force_sub(client: Client, message: Message):
         return await temp.edit(f"<b>❌ Channel not found in force-sub list:</b> <code>{ch_id}</code>")
 
 # View all channels
-@Client.on_message(filters.command('listchnl') & filters.private & admin)
+@Client.on_message(filters.command('listchnl') & filters.private & ADMINS)
 async def list_force_sub_channels(client: Client, message: Message):
     temp = await message.reply("<b><i>ᴡᴀɪᴛ ᴀ sᴇᴄ..</i></b>", quote=True)
     channels = await db.show_channels()
@@ -176,7 +176,7 @@ async def list_force_sub_channels(client: Client, message: Message):
 
 
 
-@Client.on_message(filters.command('delreq') & filters.private & admin)
+@Client.on_message(filters.command('delreq') & filters.private & ADMINS)
 async def delete_requested_users(client, message: Message):
     if len(message.command) < 2:
         return await message.reply("⚠️ Usᴀɢᴇ: `/delreq <channel_id>`", quote=True)
