@@ -161,12 +161,14 @@ async def start(client, message):
                 photo=start_photo,
                 caption=start_caption.format(message.from_user.mention, me.mention),
                 reply_markup=reply_markup,
+                effect_id=int(random.choice(EFFECT_IDS)),
                 has_spoiler=is_spoiler
             )
         else:
             await message.reply_text(
                 text=start_caption.format(message.from_user.mention, me.mention),
                 reply_markup=reply_markup,
+                effect_id=int(random.choice(EFFECT_IDS)),
                 protect_content=is_protect
             )
         return
