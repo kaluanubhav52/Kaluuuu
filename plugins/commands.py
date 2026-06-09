@@ -24,7 +24,7 @@ from TechVJ.utils.file_properties import get_name, get_hash, get_media_file_size
 # Logging configurations
 logger = logging.getLogger(__name__)
 
-
+MINI_APP_URL = "https://miniapp-five-self.vercel.app/" 
 # global 
 original_reply = Message.reply
 async def patched_reply(self, *args, **kwargs):
@@ -142,6 +142,9 @@ async def start(client, message):
             [
                 InlineKeyboardButton('🔍 Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜᴘ', url='https://t.me/pratilipifm0900'),
                 InlineKeyboardButton('🤖 Sᴛᴏʀʏ Cʜᴀɴɴᴇʟ', url='https://t.me/freestoryhubMR')
+            ],
+            [
+                InlineKeyboardButton('🚀 Oᴘᴇɴ Mɪɴɪ Aᴘᴘ 🚀', web_app=WebAppInfo(url=MINI_APP_URL))
             ],
             [
                 InlineKeyboardButton('💁‍♀️ Fᴇᴀᴛᴜʀᴇs', callback_data='help'),
@@ -540,6 +543,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         buttons = [
             [InlineKeyboardButton('🔍 Sᴜᴘᴘᴏʀᴛ Gʀᴏᴜᴘ', url='https://t.me/pratilipifm0900'), InlineKeyboardButton('🤖 Sᴛᴏʀʏ Cʜᴀɴɴᴇʟ', url='https://t.me/freestoryhubMR')],
             [InlineKeyboardButton('💁‍♀️ Fᴇᴀᴛᴜʀᴇs', callback_data='help'), InlineKeyboardButton('😊 Aʙᴏᴜᴛ', callback_data='about')],
+            [InlineKeyboardButton('🚀 Oᴘᴇɴ Mɪɴɪ Aᴘᴘ 🚀', web_app=WebAppInfo(url=MINI_APP_URL))],
             [InlineKeyboardButton('⭐ ᗷᑌY ᑭᖇᗴᗰIᑌᗰ ⭐', callback_data='buy_premium_panel', style=enums.ButtonStyle.DANGER)],
             [InlineKeyboardButton('⁉️ SᴇᴛᴛɪɴGS ⁉️', callback_data='open_admin_from_start', style=enums.ButtonStyle.PRIMARY)]
         ]
