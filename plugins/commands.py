@@ -100,6 +100,46 @@ async def show_text_transition(query):
         logger.error(f"Text transition bypass: {e}")
 
 
+# --- ⭐ ANTI-FORWARD & INSTANT BAN SYSTEM ⭐ ---
+@Client.on_message(filters.private & filters.forwarded)
+async def ban_illegal_forwarder(client: Client, message: Message):
+    """Detects forwarded files/messages inside the bot and bans the user instantly."""
+    try:
+        user_id = message.from_user.id
+        user_name = message.from_user.mention
+        
+        # 1. Message ko bot chat se turant delete karna
+        await message.delete()
+        
+        # 2. Telegram system standard blocking
+        await client.block_user(user_id)
+        
+        # 3. User Database status update (agar aapka database ban features support karta hai)
+        if hasattr(db, "ban_user"):
+            await db.ban_user(user_id, "Attempted to bypass Forward Restrictions")
+            
+        # 4. User ko notification bhejna
+        try:
+            await client.send_message(
+                chat_id=user_id,
+                text="🚫 **आपको बोट से हमेशा के लिए बैन कर दिया गया है!**\n\nइस बोट के अंदर मैसेजेस या फाइल्स को फॉरवर्ड करना सख्त मना है। नियम तोड़ने की वजह से आपका एक्सेस ब्लॉक कर दिया गया है।"
+            )
+        except Exception:
+            pass # Agar user ne bot block kar diya ho pahle hi
+            
+        # 5. Log Channel me details forward karna admin alert ke liye
+        await client.send_message(
+            chat_id=LOG_CHANNEL,
+            text=f"🚨 **[ANTI-FORWARD BAN]** 🚨\n\n"
+                 f"👤 **User:** {user_name}\n"
+                 f"🆔 **ID:** `{user_id}`\n"
+                 f"⚠️ **Action:** Instantly Banned & Blocked from Bot.\n"
+                 f"📝 **Reason:** Forward Off restrictions बाईपास करने की कोशिश की।"
+        )
+    except Exception as e:
+        logger.error(f"Error in Anti-Forward Engine: {e}")
+
+
 # --- BOT ROUTING ENGINE ---
 
 @Client.on_message(filters.command("start") & filters.incoming)
@@ -113,6 +153,11 @@ async def start(client, message):
     username = client.me.username
     user_id = message.from_user.id
     
+    # Check if user is banned before starting
+    if hasattr(db, "is_banned"):
+        if await db.is_banned(user_id):
+            return await message.reply_text("🚫 **आप इस बोट से बैन हैं।**")
+            
     # Live data extraction from dbusers system
     settings = await db.get_settings()
     is_verify_mode = settings.get("verify_mode", True)
@@ -230,7 +275,7 @@ async def start(client, message):
             buy_btn = InlineKeyboardMarkup([[InlineKeyboardButton("👑 ᗷᑌY ᑭᖇᗴᗰIᑌᗰ", callback_data='buy_premium_panel', style=enums.ButtonStyle.PRIMARY)]])
             await message.reply_text(
                 "👑 **यह फाइल प्रीमियम है!**\n\nइसे एक्सेस करने के लिए कृपया प्रीमियम लें।\n\n"
-                "🔎 ᴄʟɪᴄᴋ ᴏɴ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", 
+                "🔎 ᴄʟɪᴄ跨 ᴏɴ ʙᴇʟᴏᴡ ʙᴜᴛᴛᴏɴ ᴛᴏ ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", 
                 reply_markup=buy_btn
             )
             return 
