@@ -17,5 +17,6 @@ gunicorn
 Jinja2
 werkzeug
 itsdangerous
+requests
 
 
