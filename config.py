@@ -77,9 +77,6 @@ PREMIUM_PLANS_TEXT = (
 # Verify Info :-
 VERIFY_MODE = bool(environ.get('VERIFY_MODE', True)) # Set True or False
 
-# 🛑 [नया बदलाव] - वर्सेल बाईपास प्रोटेक्शन सेटिंग्स 🛑
-VERCEL_DOMAIN = environ.get("VERCEL_DOMAIN", "https://securitybyac.vercel.app") 
-
 SHORTLINK_URL = environ.get("SHORTLINK_URL", "linkshortify.com") # shortlink domain without https://
 SHORTLINK_API = environ.get("SHORTLINK_API", "9d9199caec2c2e30e0670f1549ffa1a316caa541") # shortlink api
 VERIFY_TUTORIAL = environ.get("VERIFY_TUTORIAL", "https://t.me/howanubhav/14") # how to open link 
