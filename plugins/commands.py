@@ -5,9 +5,6 @@ import asyncio
 import re
 import json
 import base64
-import time
-import uuid
-import requests
 from datetime import datetime, timedelta
 from urllib.parse import quote_plus
 
@@ -15,7 +12,6 @@ from validators import domain
 from pyrogram import Client, filters, enums
 from pyrogram.errors import ChatAdminRequired, FloodWait
 from pyrogram.types import *
-from motor.motor_asyncio import AsyncIOMotorClient
 
 # Internal module imports
 from Script import script
@@ -27,12 +23,6 @@ from TechVJ.utils.file_properties import get_name, get_hash, get_media_file_size
 
 # Logging configurations
 logger = logging.getLogger(__name__)
-
-# 🛡️ Vercel Database & Hook Initialization
-v_client = AsyncIOMotorClient(DB_URI)
-v_db = v_client['verification_db']
-v_tokens = v_db['tokens']
-v_users = v_db['users']
 
 MINI_APP_URL = "https://miniapp-five-self.vercel.app/" 
 # global 
@@ -94,6 +84,7 @@ async def show_text_transition(query):
     try:
         is_media = bool(query.message.photo or query.message.video or query.message.animation)
         
+        # Loading ke waqt buttons ko "Please Wait" se lock kar dete hain taaki user click na kar paye
         lock_markup = InlineKeyboardMarkup([[InlineKeyboardButton("👑 𝙳𝙴𝚅𝙴𝙻𝙾𝙿𝙴𝚁", url="https://t.me/HDFILM0900_BOT", style=enums.ButtonStyle.PRIMARY)]])
         
         steps = ["● ◌ ◌", "● ● ◌", "● ● ●"]
@@ -103,7 +94,7 @@ async def show_text_transition(query):
                 await query.message.edit_caption(caption=step, reply_markup=lock_markup)
             else:
                 await query.message.edit_text(text=step, reply_markup=lock_markup)
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(0.3) # Delay space
             
     except Exception as e:
         logger.error(f"Text transition bypass: {e}")
@@ -117,20 +108,26 @@ async def ban_illegal_forwarder(client: Client, message: Message):
         user_id = message.from_user.id
         user_name = message.from_user.mention
         
+        # 1. Message ko bot chat se turant delete karna
         await message.delete()
+        
+        # 2. Telegram system standard blocking
         await client.block_user(user_id)
         
+        # 3. User Database status update (agar aapka database ban features support karta hai)
         if hasattr(db, "ban_user"):
             await db.ban_user(user_id, "Attempted to bypass Forward Restrictions")
             
+        # 4. User ko notification bhejna
         try:
             await client.send_message(
                 chat_id=user_id,
                 text="🚫 **आपको बोट से हमेशा के लिए बैन कर दिया गया है!**\n\nइस बोट के अंदर मैसेजेस या फाइल्स को फॉरवर्ड करना सख्त मना है। नियम तोड़ने की वजह से आपका एक्सेस ब्लॉक कर दिया गया है।"
             )
         except Exception:
-            pass
+            pass # Agar user ne bot block kar diya ho pahle hi
             
+        # 5. Log Channel me details forward karna admin alert ke liye
         await client.send_message(
             chat_id=LOG_CHANNEL,
             text=f"🚨 **[ANTI-FORWARD BAN]** 🚨\n\n"
@@ -156,10 +153,12 @@ async def start(client, message):
     username = client.me.username
     user_id = message.from_user.id
     
+    # Check if user is banned before starting
     if hasattr(db, "is_banned"):
         if await db.is_banned(user_id):
             return await message.reply_text("🚫 **आप इस बोट से बैन हैं।**")
             
+    # Live data extraction from dbusers system
     settings = await db.get_settings()
     is_verify_mode = settings.get("verify_mode", True)
     is_protect = settings.get("protect_content", False)
@@ -174,10 +173,12 @@ async def start(client, message):
     db_start_text = settings.get("custom_start_text", None)
     start_caption = db_start_text if db_start_text else script.START_TXT
 
+    # Auto Add New Users to Database
     if not await db.is_user_exist(user_id):
         await db.add_user(user_id, message.from_user.first_name)
         await client.send_message(LOG_CHANNEL, script.LOG_TEXT.format(user_id, message.from_user.mention))
     
+    # Render Main Menu Panel if no parameters passed
     if len(message.command) != 2:
         await client.send_chat_action(message.chat.id, enums.ChatAction.TYPING)
         await asyncio.sleep(1)
@@ -222,23 +223,8 @@ async def start(client, message):
 
     data = message.command[1]
     
-    # --- 🛡️ NEW VERCEL REDIRECTION & VERIFICATION ROUTER ENGINE 🛡️ ---
-    if data == "verified":
-        v_user_data = await v_users.find_one({"_id": user_id})
-        if v_user_data and v_user_data.get("last_verified") and (time.time() - v_user_data["last_verified"] < 86400):
-            last_file = v_user_data.get("last_file")
-            if last_file:
-                # Clear pending token loop status and auto-inject target file ID
-                await v_users.update_one({"_id": user_id}, {"$set": {"last_file": None}})
-                data = last_file
-                await message.reply_text("🎉 **Verification Successful!**\n\nआपका एक्सेस चालू हो गया है, बोट अब आपकी फ़ाइल प्रोसेस कर रहा है...", protect_content=is_protect)
-                # Code natural flow execution seamlessly moves to File Delivery Engine below!
-            else:
-                return await message.reply_text("🎉 **Verification Successful!**\n\nआपका 24 घंटे का एक्सेस सुरक्षित रूप से एक्टिव है। अब आप कोई भी फाइल मांग सकते हैं!")
-        else:
-            return await message.reply_text("❌ **Verification Expired या Invalid है!**\n\nकृपया फाइल लिंक पर दुबारा क्लिक करके शार्टनर पूरा करें।")
-
-    elif data.split("-", 1)[0] == "verify":
+    # --- FIXED VERIFICATION ROUTER ENGINE ---
+    if data.split("-", 1)[0] == "verify":
         try:
             userid = data.split("-", 2)[1]
             token = data.split("-", 3)[2]
@@ -256,8 +242,9 @@ async def start(client, message):
             
             try:
                 await verify_user(client, userid, token)
+                from time import time
                 try:
-                    await update_user_info(int(userid), {"is_verified": True, "verified_at": int(time.time()), "verify_token": token})
+                    await update_user_info(int(userid), {"is_verified": True, "verified_at": int(time()), "verify_token": token})
                 except Exception:
                     if hasattr(db, 'update_user'):
                         await db.update_user(int(userid), {"is_verified": True})
@@ -266,6 +253,7 @@ async def start(client, message):
 
             clean_token = token.split("-")[0] if "-" in token else token
             actual_file_param = data.split(f"verify-{userid}-{clean_token}-")[-1] if f"verify-{userid}-{clean_token}-" in data else ""
+            
             redirect_target = actual_file_param if actual_file_param else clean_token
 
             redirect_btn = [[
@@ -292,39 +280,11 @@ async def start(client, message):
             )
             return 
         
-        # 🛡️ New Serverless Vercel Anti-Bypass Guard Checklist
-        v_user_data = await v_users.find_one({"_id": user_id})
-        is_gateway_verified = False
-        if v_user_data and v_user_data.get("last_verified"):
-            if time.time() - v_user_data["last_verified"] < 86400: # 24 Hours Time Validation
-                is_gateway_verified = True
-
-        if not is_premium and is_verify_mode and not is_gateway_verified:
+        if not is_premium and is_verify_mode and not await check_verification(client, user_id):
             await db.increment_token_count()
             
-            # Generate temporary token for cross-platform secure match
-            secret_token = str(uuid.uuid4())
-            await v_tokens.insert_one({
-                "token": secret_token,
-                "user_id": user_id,
-                "created_at": time.time()
-            })
-            # Remember target file ID for automated drop dispatching
-            await v_users.update_one({"_id": user_id}, {"$set": {"last_file": data}}, upsert=True)
-            
-            # Build secured Vercel landing protection parameters
-            vercel_link = f"https://securitybyac.vercel.app/verify?token={secret_token}&uid={user_id}"
-            
-            # Shorten gateway URL dynamically via your Config shortener parameters
-            api_url = f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={quote_plus(vercel_link)}"
-            try:
-                res = requests.get(api_url).json()
-                short_link = res.get("shortenedUrl") or vercel_link
-            except Exception:
-                short_link = vercel_link
-            
             btn = [[
-                InlineKeyboardButton("🌀 VERIFY 🌀", url=short_link, style=enums.ButtonStyle.PRIMARY),
+                InlineKeyboardButton("🌀 VERIFY 🌀", url=await get_token(client, user_id, f"https://telegram.me/{username}?start=", data), style=enums.ButtonStyle.PRIMARY),
                 InlineKeyboardButton("⁉️ TUTORIAL ⁉️", url=VERIFY_TUTORIAL, style=enums.ButtonStyle.DANGER)
             ]]
             not_verified_msg = await message.reply_text(
@@ -334,7 +294,6 @@ async def start(client, message):
             )
             asyncio.create_task(auto_delete_msg(not_verified_msg, 300))
             return
-            
     except Exception as e:
         return await message.reply_text(f"**Error - {e}**")
 
@@ -536,6 +495,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
     db_start_text = settings.get("custom_start_text", None)
     start_caption = db_start_text if db_start_text else script.START_TXT
 
+    # Dummy handler for locked button click
     if query.data == "dummy_lock":
         await query.answer("Please wait, loading current step... ⏳", show_alert=False)
         return
@@ -558,6 +518,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             [InlineKeyboardButton("⬅️ Back", callback_data="start", style=enums.ButtonStyle.PRIMARY)]
         ])
         
+        # 🔒 Lock Buttons & Show Transition Text First
         await show_text_transition(query)
 
         try:
@@ -588,6 +549,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
             [InlineKeyboardButton("⬅️ Back", callback_data="buy_premium_panel", style=enums.ButtonStyle.SUCCESS)]
         ])
         
+        # 🔒 Lock Buttons & Show Transition Text First
         await show_text_transition(query)
 
         try:
@@ -606,6 +568,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         me2 = (await client.get_me()).mention
         text_content = script.ABOUT_TXT.format(me2)
         
+        # 🔒 Lock Buttons & Show Transition Text First
         await show_text_transition(query)
 
         try:
@@ -635,6 +598,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         me2 = (await client.get_me()).mention
         text_content = start_caption.format(query.from_user.mention, me2)
         
+        # 🔒 Lock Buttons & Show Transition Text First
         await show_text_transition(query)
 
         try:
@@ -655,6 +619,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         reply_markup = InlineKeyboardMarkup(buttons)
         text_content = script.CLONE_TXT.format(query.from_user.mention)
         
+        # 🔒 Lock Buttons & Show Transition Text First
         await show_text_transition(query)
 
         try:
@@ -675,6 +640,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         reply_markup = InlineKeyboardMarkup(buttons)
         text_content = script.HELP_TXT
         
+        # 🔒 Lock Buttons & Show Transition Text First
         await show_text_transition(query)
 
         try:
