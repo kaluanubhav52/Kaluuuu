@@ -77,11 +77,13 @@ PREMIUM_PLANS_TEXT = (
 # Verify Info :-
 VERIFY_MODE = bool(environ.get('VERIFY_MODE', True)) # Set True or False
 
-# If Verify Mode Is True Then Fill All Required Variable, If False Then Don't Fill.
+# 🛑 [नया बदलाव] - वर्सेल बाईपास प्रोटेक्शन सेटिंग्स 🛑
+VERCEL_DOMAIN = environ.get("VERCEL_DOMAIN", "https://securitybyac.vercel.app") 
+
 SHORTLINK_URL = environ.get("SHORTLINK_URL", "linkshortify.com") # shortlink domain without https://
 SHORTLINK_API = environ.get("SHORTLINK_API", "9d9199caec2c2e30e0670f1549ffa1a316caa541") # shortlink api
 VERIFY_TUTORIAL = environ.get("VERIFY_TUTORIAL", "https://t.me/howanubhav/14") # how to open link 
-VERIFY_EXPIRE_TIME = int(environ.get("VERIFY_EXPIRE_TIME", "300"))
+VERIFY_EXPIRE_TIME = int(environ.get("VERIFY_EXPIRE_TIME", "86400")) # 24 घंटे के लिए (86400 Seconds)
 
 #Reaction /start
 REACTIONS = ["🤝", "😇", "🤗", "😍", "👍", "🎅", "😐", "🥰", "🤩", "😱", "🤣", "😘", "👏", "😛", "😈", "🎉", "⚡️", "🫡", "🤓", "😎", "🏆", "🔥", "🤭", "🌚", "🆒", "👻", "😁"] 
@@ -108,8 +110,6 @@ else:
     ON_HEROKU = False
 URL = environ.get("URL", "https://testofvjfilter-1fa60b1b8498.herokuapp.com/")
 
-
 # Don't Remove Credit Tg - @VJ_Bots
 # Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
 # Ask Doubt on telegram @KingVJ01
-    
