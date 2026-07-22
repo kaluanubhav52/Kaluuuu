@@ -50,7 +50,7 @@ async def get_main_panel_layout(settings):
     ])
     return text, keyboard
 
-# 🔥 UPDATED: Added Live Token Progress Bar Logic Inside Verification Layout
+# 🔥 UPDATED: Added Shortener 1 & Shortener 2 Dual Support
 async def get_verify_menu_layout(settings):
     v_status = "🟢 ᴏɴ" if settings.get("verify_mode", True) else "🔴 ᴏғғ"
     prem_mode_status = "🟢 ᴏɴ" if settings.get("premium_mode", False) else "🔴 ᴏғғ"
@@ -62,10 +62,9 @@ async def get_verify_menu_layout(settings):
     except Exception:
         today_tokens = 0
         
-    daily_target = 1000  # Aap apna target change kar sakte ho (e.g. 500, 1000, 2000)
+    daily_target = 1000  
     percentage = min(int((today_tokens / daily_target) * 100), 100)
     
-    # Custom Progress Bar Build
     bar_length = 10
     filled_length = int(bar_length * percentage // 100)
     bar = "█" * filled_length + "░" * (bar_length - filled_length)
@@ -74,19 +73,26 @@ async def get_verify_menu_layout(settings):
         "🔐 **ᴍᴀɴᴀɢᴇ ʏᴏᴜʀ ᴛᴏᴋᴇɴ ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ sᴇᴛᴛɪɴɢs**\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         "⚠️ *Nᴏᴛᴇ: Oɴʟʏ ᴏɴᴇ ᴍᴏᴅᴇ ᴄᴀɴ ʀᴜɴ ᴀᴛ ᴀ ᴛɪᴍᴇ, ᴇɪᴛʜᴇʀ Vᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴏʀ Pʀᴇᴍɪᴜᴍ Mᴏᴅᴇ.*\n\n"
-        f"🔗 **Sʜᴏʀᴛᴇɴᴇʀ Sɪᴛᴇ:** `{settings.get('shortlink_url')}`\n"
-        f"🔑 **Sʜᴏʀᴛᴇɴᴇʀ API:** `{settings.get('shortlink_api')}`\n"
+        "🌐 **Sʜᴏʀᴛᴇɴᴇʀ 1 (Option A):**\n"
+        f"├ 🔗 **Sɪᴛᴇ:** `{settings.get('shortlink_url', 'N/A')}`\n"
+        f"└ 🔑 **API:** `{settings.get('shortlink_api', 'N/A')}`\n\n"
+        "⚡ **Sʜᴏʀᴛᴇɴᴇʀ 2 (Option B):**\n"
+        f"├ 🔗 **Sɪᴛᴇ:** `{settings.get('shortlink_url2', 'N/A')}`\n"
+        f"└ 🔑 **API:** `{settings.get('shortlink_api2', 'N/A')}`\n\n"
         f"⏱️ **Tᴏᴋᴇɴ Vᴀʟɪᴅɪᴛʏ:** `{v_expire_hours} Hᴏᴜʀs`\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         f"📊 **ᴛᴏᴅᴀʏ's ʟɪᴠᴇ ᴛᴏᴋᴇɴs:** `{today_tokens}/{daily_target}`\n"
         f"📈 **ᴘʀᴏɢʀᴇss:** `[{bar}] {percentage}%`"
     )
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴍᴏᴅᴇ: {v_status}", callback_data="adm_toggle_verify",style=enums.ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton(f"ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴍᴏᴅᴇ: {v_status}", callback_data="adm_toggle_verify", style=enums.ButtonStyle.PRIMARY)],
         [InlineKeyboardButton(f"ᴘʀᴇᴍɪᴜᴍ ᴍᴏᴅᴇ: {prem_mode_status}", callback_data="adm_toggle_premium_mode", style=enums.ButtonStyle.PRIMARY)],
         [InlineKeyboardButton("sᴇᴛ ᴠᴇʀɪғɪᴄᴀᴛɪᴏɴ ᴛɪᴍᴇ 🔑", callback_data="adm_set_token_time", style=enums.ButtonStyle.PRIMARY)],
-        [InlineKeyboardButton("sᴇᴛ sʜᴏʀᴛᴇɴᴇʀ ᴀᴘɪ ɪᴅ 🔗", callback_data="adm_change_link")],
-        [InlineKeyboardButton("🔄 ʀᴇғʀᴇsʜ sᴛᴀᴛs", callback_data="adm_sub_verify")],  # Loop response refresh key
+        [
+            InlineKeyboardButton("sᴇᴛ sʜᴏʀᴛᴇɴᴇʀ 1 🌐", callback_data="adm_change_link_1"),
+            InlineKeyboardButton("sᴇᴛ sʜᴏʀᴛᴇɴᴇʀ 2 ⚡", callback_data="adm_change_link_2")
+        ],
+        [InlineKeyboardButton("🔄 ʀᴇғʀᴇsʜ sᴛᴀᴛs", callback_data="adm_sub_verify")],
         [InlineKeyboardButton("ʙᴀᴄᴋ ᴛᴏ ᴍᴀɪɴ ᴍᴇɴᴜ", callback_data="adm_back_main")]
     ])
     return text, keyboard
@@ -137,7 +143,7 @@ async def get_premium_menu_layout(settings):
         "👑 **ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀ ᴄᴏɴғɪɢᴜʀᴀᴛɪᴏɴ**\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         f"👥 **Tᴏᴛᴀʟ Pʀᴇᴍɪᴜᴍ Usᴇʀs:** `{total_premium}`\n"
-        f"🔗 **Cᴜʀʀᴇɴᴛ Bᴜʏ Lɪɴᴋ:** `{current_buy_link}`"
+        f"🔗 **Cᴜʀʀᴇɴᴛ Bᴜᴜ Lɪɴᴋ:** `{current_buy_link}`"
     )
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("➕ ᴀᴅᴅ ᴘʀᴇᴍɪᴜᴍ ᴜsᴇʀs", callback_data="adm_add_prem")],
@@ -278,7 +284,7 @@ async def admin_callback(client, query):
     elif action == "toggle_spoiler":
         new_val = not settings.get("start_spoiler", False)
         await db.update_setting("start_spoiler", new_val)
-        await query.answer(f"sᴘᴏɪʟᴇʀ ᴍᴏᴅᴇ {'ᴇɴᴀʙʟᴇᴅ 🟢' if new_val else 'ᴅɪsᴀʙʟᴇdisabled 🔴'}")
+        await query.answer(f"sᴘᴏɪʟᴇʀ ᴍᴏᴅᴇ {'ᴇɴᴀʙʟᴇᴅ 🟢' if new_val else 'ᴅɪsᴀʙʟᴇᴅ 🔴'}")
         settings = await db.get_settings()
         text, keyboard = await get_start_page_menu_layout(settings)
         try:
@@ -340,7 +346,7 @@ async def admin_callback(client, query):
         except Exception:
             await client.send_message(chat_id, text=list_text, reply_markup=back_keyboard)
 
-    elif action in ["add_prem", "rem_prem", "set_buy_link", "set_start_txt", "set_start_img", "set_time", "set_token_time", "change_link"]:
+    elif action in ["add_prem", "rem_prem", "set_buy_link", "set_start_txt", "set_start_img", "set_time", "set_token_time", "change_link", "change_link_1", "change_link_2"]:
         await query.answer() 
         try:
             await query.message.delete()
@@ -371,9 +377,12 @@ async def admin_callback(client, query):
         elif action == "set_token_time":
             prompt_text = "🔑 **sᴇɴᴅ ᴛʜᴇ ᴛᴏᴋᴇɴ ᴠᴀʟɪᴅɪᴛʏ ᴛɪᴍᴇ ɪɴ ʜᴏᴜʀs:**\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ ᴛʜᴇ ᴘʀᴏᴄᴇss)*"
             step = "set_token_time"
-        elif action == "change_link":
-            prompt_text = "🔗 **sᴇɴᴅ ᴛʜᴇ ɴᴇᴡ sʜᴏʀᴛᴇɴᴇʀ ᴅᴏᴍᴀɪɴ ɴᴀᴍᴇ:**\n*(ᴇxᴀᴍᴘʟᴇ: `site.com`)*\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ ᴛʜᴇ ᴘʀᴏᴄᴇss)*"
-            step = "set_shortener_domain"
+        elif action in ["change_link", "change_link_1"]:
+            prompt_text = "🌐 **sᴇɴᴅ ᴛʜᴇ ɴᴇᴡ sʜᴏʀᴛᴇɴᴇʀ 1 ᴅᴏᴍᴀɪɴ ɴᴀᴍᴇ:**\n*(ᴇxᴀᴍᴘʟᴇ: `gplinks.in`)*\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ ᴛʜᴇ ᴘʀᴏᴄᴇss)*"
+            step = "set_shortener1_domain"
+        elif action == "change_link_2":
+            prompt_text = "⚡ **sᴇɴᴅ ᴛʜᴇ ɴᴇᴡ sʜᴏʀᴛᴇɴᴇʀ 2 ᴅᴏᴍᴀɪɴ ɴᴀᴍᴇ:**\n*(ᴇxᴀᴍᴘʟᴇ: `droplink.co`)*\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ ᴛʜᴇ ᴘʀᴏᴄᴇss)*"
+            step = "set_shortener2_domain"
 
         ask_msg = await client.send_message(chat_id, prompt_text)
         ADMIN_STATE[chat_id] = {"step": step, "bot_msg_id": ask_msg.id}
@@ -414,7 +423,7 @@ async def admin_state_listener(client: Client, message):
         target_id = int(text)
         ADMIN_STATE[chat_id]["target_id"] = target_id
         ADMIN_STATE[chat_id]["step"] = "add_prem_days"
-        ask_msg = await message.reply(f"⏱️ **[sᴛᴇᴘ 2/3] ʜᴏᴡ ᴍᴀɴʏ ᴅᴀʏs ᴏғ ᴘʀᴇᴍɪᴜᴍ sʜᴏᴜʟʙ ʙᴇ ɢɪᴠᴇɴ ᴛᴏ ᴜsᴇʀ `{target_id}`?**\n*(ᴇx: 30, 0 for hours)*")
+        ask_msg = await message.reply(f"⏱️ **[sᴛᴇᴘ 2/3] ʜᴏᴡ ᴍᴀɴʏ ᴅᴀʏs ᴏғ ᴘʀᴇᴍɪᴜᴍ sʜᴏᴜʟᴅ ʙᴇ ɢɪᴠᴇɴ ᴛᴏ ᴜsᴇʀ `{target_id}`?**\n*(ᴇx: 30, 0 for hours)*")
         ADMIN_STATE[chat_id]["bot_msg_id"] = ask_msg.id
 
     elif step == "add_prem_days":
@@ -482,7 +491,7 @@ async def admin_state_listener(client: Client, message):
     elif step == "set_buy_link":
         del ADMIN_STATE[chat_id]
         await db.update_setting("premium_buy_link", text)
-        success_msg = await message.reply(f"✅ **ᴘʀᴇᴍɪᴜᴍ ʙᴜʏ ʟɪɴᴋ ᴜᴘᴅᴀ態ᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
+        success_msg = await message.reply(f"✅ **ᴘʀᴇᴍɪᴜᴍ ʙᴜʏ ʟɪɴᴋ ᴜᴘᴅᴀᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
         asyncio.create_task(auto_delete_message(success_msg, 120))
 
     elif step == "set_start_txt":
@@ -523,17 +532,18 @@ async def admin_state_listener(client: Client, message):
             err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ғᴏʀᴍᴀᴛ!** ᴏɴʟʏ ɪɴᴛᴇɢᴇʀs/ɴᴜᴍʙᴇʀs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ.")
             ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
 
-    elif step == "set_shortener_domain":
+    # --- Shortener 1 Setup ---
+    elif step == "set_shortener1_domain":
         if not is_valid_domain(text):
             err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ᴅᴏᴍᴀɪɴ ғᴏʀᴍᴀᴛ!** ᴜsᴇ `site.com`.")
             ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
             return
         ADMIN_STATE[chat_id]["domain"] = text
-        ADMIN_STATE[chat_id]["step"] = "set_shortener_api"
-        ask_msg = await message.reply("🔑 **sᴇɴᴅ ᴛʜᴇ ᴀᴘɪ ᴋᴇʏ ғᴏʀ ᴛʜᴀᴛ ᴡᴇʙsɪᴛᴇ:**\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*")
+        ADMIN_STATE[chat_id]["step"] = "set_shortener1_api"
+        ask_msg = await message.reply("🔑 **sᴇɴᴅ ᴛʜᴇ ᴀᴘɪ ᴋᴇʏ ғᴏʀ sʜᴏʀᴛᴇɴᴇʀ 1:**\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*")
         ADMIN_STATE[chat_id]["bot_msg_id"] = ask_msg.id
 
-    elif step == "set_shortener_api":
+    elif step == "set_shortener1_api":
         if not is_valid_api(text):
             err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ᴀᴘɪ ғᴏʀᴍᴀᴛ!**")
             ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
@@ -543,7 +553,31 @@ async def admin_state_listener(client: Client, message):
         del ADMIN_STATE[chat_id]
         await db.update_setting("shortlink_url", domain)
         await db.update_setting("shortlink_api", api)
-        success_msg = await message.reply("✅ **sʜᴏʀᴛᴇɴᴇʀ ᴅᴇᴛᴀɪʟs ᴜᴘᴅᴀᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
+        success_msg = await message.reply("✅ **sʜᴏʀᴛᴇɴᴇʀ 1 ᴅᴇᴛᴀɪʟs ᴜᴘᴅᴀᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
+        asyncio.create_task(auto_delete_message(success_msg, 120))
+
+    # --- Shortener 2 Setup ---
+    elif step == "set_shortener2_domain":
+        if not is_valid_domain(text):
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ᴅᴏᴍᴀɪɴ ғᴏʀᴍᴀᴛ!** ᴜsᴇ `site.com`.")
+            ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
+            return
+        ADMIN_STATE[chat_id]["domain"] = text
+        ADMIN_STATE[chat_id]["step"] = "set_shortener2_api"
+        ask_msg = await message.reply("🔑 **sᴇɴᴅ ᴛʜᴇ ᴀᴘɪ ᴋᴇʏ ғᴏʀ sʜᴏʀᴛᴇɴᴇʀ 2:**\n\n*(ᴛʏᴘᴇ /cancel ᴛᴏ ᴄᴀɴᴄᴇʟ)*")
+        ADMIN_STATE[chat_id]["bot_msg_id"] = ask_msg.id
+
+    elif step == "set_shortener2_api":
+        if not is_valid_api(text):
+            err_msg = await message.reply("❌ **ɪɴᴠᴀʟɪᴅ ᴀᴘɪ ғᴏʀᴍᴀᴛ!**")
+            ADMIN_STATE[chat_id]["bot_msg_id"] = err_msg.id
+            return
+        domain = ADMIN_STATE[chat_id]["domain"]
+        api = text
+        del ADMIN_STATE[chat_id]
+        await db.update_setting("shortlink_url2", domain)
+        await db.update_setting("shortlink_api2", api)
+        success_msg = await message.reply("✅ **sʜᴏʀᴛᴇɴᴇʀ 2 ᴅᴇᴛᴀɪʟs ᴜᴘᴅᴀᴛᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**", reply_markup=TEMP_BACK_BTN)
         asyncio.create_task(auto_delete_message(success_msg, 120))
 
 
