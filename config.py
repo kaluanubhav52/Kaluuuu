@@ -80,12 +80,6 @@ VERIFY_MODE = bool(environ.get('VERIFY_MODE', True)) # Set True or False
 # --- Shortener 1 (Option A) ---
 SHORTLINK_URL = environ.get("SHORTLINK_URL", "linkshortify.com") # shortlink domain without https://
 SHORTLINK_API = environ.get("SHORTLINK_API", "9d9199caec2c2e30e0670f1549ffa1a316caa541") # shortlink api
-SHORTLINK_NAME = environ.get("SHORTLINK_NAME", "🌐 Option A")
-
-# --- Shortener 2 (Option B) ---
-SHORTLINK_URL2 = environ.get("SHORTLINK_URL2", "droplink.co") # Second shortlink domain
-SHORTLINK_API2 = environ.get("SHORTLINK_API2", "your_second_api_key_here") # Second shortlink api
-SHORTLINK_NAME2 = environ.get("SHORTLINK_NAME2", "⚡ Option B")
 
 VERIFY_TUTORIAL = environ.get("VERIFY_TUTORIAL", "https://t.me/howanubhav/14") # how to open link 
 VERIFY_EXPIRE_TIME = int(environ.get("VERIFY_EXPIRE_TIME", "86400")) # 24 घंटे के लिए (86400 Seconds)
