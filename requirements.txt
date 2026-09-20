@@ -1,4 +1,4 @@
-kurigram 
+kurigram==2.2.25
 TgCrypto
 aiohttp
 pymongo[srv]
